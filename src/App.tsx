@@ -17,7 +17,17 @@ function App() {
   const [modelConfigs, setModelConfigs] = useUserStorage<ModelConfig[]>(
     user?.username || null,
     'modelConfigs',
-    []
+    [
+      {
+        id: 'default-google',
+        name: '預設 Google AI',
+        provider: 'google',
+        apiKey: '',
+        model: 'gemini-pro',
+        temperature: 0.7,
+        maxTokens: 2048
+      }
+    ]
   );
 
   const [mcps, setMcps] = useUserStorage<MCPConfig[]>(

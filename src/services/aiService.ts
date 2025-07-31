@@ -10,10 +10,14 @@ export async function runMcpPipeline(
 
   for (let i = 0; i < mcp.steps.length; i++) {
     const step = mcp.steps[i];
-    const model = models.find(m => m.id === step.modelId);
+    let model = models.find(m => m.id === step.modelId);
+    
+    if (!model || step.modelId === 'auto-select') {
+      model = models.length > 0 ? models[0] : undefined;
+    }
     
     if (!model) {
-      throw new Error(`Model ${step.modelId} not found`);
+      throw new Error(`No models available. Please configure at least one AI model in settings.`);
     }
 
     let prompt = step.promptTemplate;

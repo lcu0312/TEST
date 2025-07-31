@@ -20,7 +20,7 @@ export const DEFAULT_MCP: MCPConfig = {
     {
       id: 'story-generation',
       name: '生成互動故事',
-      modelId: 'default-text',
+      modelId: 'auto-select',
       promptTemplate: `基於以下輸入創建一個互動式分支故事：
 
 用戶輸入：{{input.prompt}}
