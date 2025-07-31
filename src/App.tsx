@@ -7,7 +7,7 @@ import { ChatView } from './components/ChatView';
 import { LibraryView } from './components/LibraryView';
 import { useUserStorage } from './hooks/useUserStorage';
 import { ModelConfig, MCPConfig, SavedCreation, ViewMode, User, LorebookEntry } from './types';
-import { DEFAULT_MCP } from './utils';
+import { DEFAULT_MCPS } from './utils';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -33,7 +33,7 @@ function App() {
   const [mcps, setMcps] = useUserStorage<MCPConfig[]>(
     user?.username || null,
     'mcps',
-    [DEFAULT_MCP]
+    DEFAULT_MCPS
   );
 
   const [savedCreations, setSavedCreations] = useUserStorage<SavedCreation[]>(

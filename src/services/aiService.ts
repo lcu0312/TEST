@@ -12,8 +12,18 @@ export async function runMcpPipeline(
     const step = mcp.steps[i];
     let model = models.find(m => m.id === step.modelId);
     
-    if (!model || step.modelId === 'auto-select') {
-      model = models.length > 0 ? models[0] : undefined;
+    if (!model || step.modelId.startsWith('auto-select')) {
+      const stepType = step.modelId.split('-').pop() || 'general';
+      const autoDetectedModels = autoDetectModelsForContent(stepType, models);
+      
+      if (autoDetectedModels.length > 0) {
+        const selectedModelId = autoDetectedModels[0];
+        model = models.find(m => m.id === selectedModelId);
+      }
+      
+      if (!model && models.length > 0) {
+        model = models[0];
+      }
     }
     
     if (!model) {
@@ -326,31 +336,21 @@ export async function analyzeFile(file: File, models: ModelConfig[]): Promise<Fi
 
   if (fileType.startsWith('image/')) {
     contentType = 'image';
-    suggestedModels = models.filter(m => 
-      ['google', 'openai', 'anthropic'].includes(m.provider) || m.name.toLowerCase().includes('vision')
-    ).slice(0, 3).map(m => m.id);
+    suggestedModels = autoDetectModelsForContent('image', models);
     confidence = 0.9;
   } else if (fileType.startsWith('video/')) {
     contentType = 'video';
-    suggestedModels = models.filter(m => 
-      ['google', 'openai'].includes(m.provider) || m.name.toLowerCase().includes('video')
-    ).slice(0, 2).map(m => m.id);
+    suggestedModels = autoDetectModelsForContent('video', models);
     extractedContent = `視頻檔案: ${file.name}, 大小: ${(file.size / 1024 / 1024).toFixed(2)}MB`;
     confidence = 0.85;
   } else if (fileType.startsWith('audio/')) {
     contentType = 'audio';
-    suggestedModels = models.filter(m => 
-      ['google', 'openai', 'azure'].includes(m.provider) || m.name.toLowerCase().includes('audio')
-    ).slice(0, 2).map(m => m.id);
+    suggestedModels = autoDetectModelsForContent('audio', models);
     extractedContent = `音頻檔案: ${file.name}, 大小: ${(file.size / 1024 / 1024).toFixed(2)}MB`;
     confidence = 0.8;
   } else if (fileType.startsWith('text/') || fileType.includes('document') || fileType.includes('pdf')) {
     contentType = 'document';
-    const prioritizedModels = models.sort((a, b) => {
-      const priority = { 'anthropic': 3, 'openai': 2, 'google': 1, 'ollama': 0 };
-      return (priority[b.provider as keyof typeof priority] || 0) - (priority[a.provider as keyof typeof priority] || 0);
-    });
-    suggestedModels = prioritizedModels.map(m => m.id);
+    suggestedModels = autoDetectModelsForContent('text', models);
     
     if (fileType.startsWith('text/')) {
       try {
@@ -366,7 +366,7 @@ export async function analyzeFile(file: File, models: ModelConfig[]): Promise<Fi
     }
   } else {
     contentType = 'document';
-    suggestedModels = models.map(m => m.id);
+    suggestedModels = autoDetectModelsForContent('general', models);
     extractedContent = `未知檔案類型: ${file.name} (${fileType})`;
     confidence = 0.3;
   }
@@ -382,6 +382,110 @@ export async function analyzeFile(file: File, models: ModelConfig[]): Promise<Fi
     extractedContent,
     confidence
   };
+}
+
+export function autoDetectModelsForContent(contentType: string, models: ModelConfig[]): string[] {
+  type ModelCapabilities = {
+    [key: string]: {
+      [provider: string]: string[];
+    };
+  };
+
+  const modelCapabilities: ModelCapabilities = {
+    'image': {
+      'google': ['gemini-pro-vision', 'gemini-1.5-pro', 'gemini-1.5-flash'],
+      'openai': ['gpt-4-vision-preview', 'gpt-4o', 'gpt-4o-mini'],
+      'anthropic': ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'],
+      'azure': ['gpt-4-vision'],
+      'huggingface': ['blip', 'clip']
+    },
+    'video': {
+      'google': ['gemini-1.5-pro', 'gemini-1.5-flash'],
+      'openai': ['gpt-4o', 'gpt-4o-mini'],
+      'azure': ['gpt-4o']
+    },
+    'audio': {
+      'google': ['gemini-1.5-pro'],
+      'openai': ['whisper-1', 'gpt-4o'],
+      'azure': ['whisper', 'gpt-4o'],
+      'huggingface': ['whisper-large']
+    },
+    'text': {
+      'anthropic': ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'],
+      'openai': ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+      'google': ['gemini-1.5-pro', 'gemini-pro'],
+      'azure': ['gpt-4', 'gpt-35-turbo'],
+      'cohere': ['command-r-plus', 'command-r'],
+      'palm': ['text-bison'],
+      'ollama': ['llama2', 'mistral', 'codellama']
+    },
+    'general': {
+      'openai': ['gpt-4o', 'gpt-4-turbo'],
+      'anthropic': ['claude-3-opus', 'claude-3-sonnet'],
+      'google': ['gemini-1.5-pro', 'gemini-pro'],
+      'azure': ['gpt-4'],
+      'ollama': ['llama2']
+    },
+    'vision': {
+      'google': ['gemini-pro-vision', 'gemini-1.5-pro'],
+      'openai': ['gpt-4-vision-preview', 'gpt-4o'],
+      'anthropic': ['claude-3-opus', 'claude-3-sonnet']
+    },
+    'creative': {
+      'anthropic': ['claude-3-opus', 'claude-3-sonnet'],
+      'openai': ['gpt-4o', 'gpt-4-turbo'],
+      'google': ['gemini-1.5-pro']
+    },
+    'analysis': {
+      'anthropic': ['claude-3-opus', 'claude-3-sonnet'],
+      'openai': ['gpt-4o', 'gpt-4-turbo'],
+      'google': ['gemini-1.5-pro']
+    },
+    'dialogue': {
+      'anthropic': ['claude-3-opus', 'claude-3-sonnet'],
+      'openai': ['gpt-4o', 'gpt-3.5-turbo'],
+      'google': ['gemini-pro']
+    },
+    'emotional': {
+      'anthropic': ['claude-3-opus', 'claude-3-sonnet'],
+      'openai': ['gpt-4o'],
+      'google': ['gemini-1.5-pro']
+    },
+    'surreal': {
+      'anthropic': ['claude-3-opus'],
+      'openai': ['gpt-4o'],
+      'google': ['gemini-1.5-pro']
+    }
+  };
+
+  const capabilities = modelCapabilities[contentType] || modelCapabilities['general'];
+  const detectedModels: string[] = [];
+
+  const providerPriority = ['anthropic', 'openai', 'google', 'azure', 'cohere', 'palm', 'huggingface', 'ollama'];
+  
+  for (const provider of providerPriority) {
+    if (capabilities[provider]) {
+      const providerModels = models.filter(m => m.provider === provider);
+      for (const model of providerModels) {
+        const modelName = model.model?.toLowerCase() || model.name.toLowerCase();
+        const supportedModels = capabilities[provider].map((m: string) => m.toLowerCase());
+        
+        if (supportedModels.some((supported: string) => modelName.includes(supported.replace('-', '')) || supported.includes(modelName))) {
+          detectedModels.push(model.id);
+        }
+      }
+      
+      if (detectedModels.length === 0 && providerModels.length > 0) {
+        detectedModels.push(providerModels[0].id);
+      }
+    }
+  }
+
+  if (detectedModels.length === 0) {
+    return models.map(m => m.id);
+  }
+
+  return detectedModels.slice(0, 5); // 限制返回最多5個模型
 }
 
 export async function processMultiAIWorkflow(

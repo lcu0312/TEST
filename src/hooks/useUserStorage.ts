@@ -26,7 +26,7 @@ export function useUserStorage<T>(
     } else {
       setValue(defaultValue);
     }
-  }, [userId, key, defaultValue]);
+  }, [userId, key]);
 
   const setStoredValue = (newValue: T | ((prev: T) => T)) => {
     const actualValue = typeof newValue === 'function' ? (newValue as (prev: T) => T)(value) : newValue;
