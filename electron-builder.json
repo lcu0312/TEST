@@ -9,13 +9,6 @@
     "electron/**/*",
     "package.json"
   ],
-  "extraFiles": [
-    {
-      "from": "dist",
-      "to": "dist",
-      "filter": ["**/*"]
-    }
-  ],
   "win": {
     "icon": "public/icons/icon.png",
     "target": [
