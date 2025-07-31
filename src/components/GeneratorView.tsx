@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, Zap, Save, Copy } from 'lucide-react';
 import { ModelConfig, MCPConfig, GeneratorOutput, SavedCreation, LorebookEntry } from '../types';
-import { runMcpPipeline } from '../services/aiService';
+import { runMcpPipeline, analyzeFile } from '../services/aiService';
 import { generateTitleFromNarrative, generateId } from '../utils';
 import { InteractivePlayer } from './InteractivePlayer';
 
@@ -14,17 +14,17 @@ interface GeneratorViewProps {
 
 export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: GeneratorViewProps) {
   const [prompt, setPrompt] = useState('');
-  const [image, setImage] = useState<File | null>(null);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [selectedMcpId, setSelectedMcpId] = useState(mcps[0]?.id || '');
   const [output, setOutput] = useState<GeneratorOutput | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentStep, setCurrentStep] = useState('');
   const [activeTab, setActiveTab] = useState<'narrative' | 'visual' | 'code'>('narrative');
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setImage(file);
+      setAttachedFile(file);
     }
   };
 
@@ -38,15 +38,18 @@ export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: Genera
     setCurrentStep('準備生成...');
 
     try {
-      let imageDescription = '';
-      if (image) {
-        imageDescription = `上傳的圖片: ${image.name}`;
+      let fileDescription = '';
+      if (attachedFile) {
+        const fileAnalysis = await analyzeFile(attachedFile, models);
+        const fileType = attachedFile.type.startsWith('image/') ? '圖片' : 
+                        attachedFile.type.startsWith('video/') ? '影片' : '文件';
+        fileDescription = `上傳的${fileType}: ${attachedFile.name}\n類型: ${fileAnalysis.contentType}\n內容: ${fileAnalysis.extractedContent || '無法提取內容'}\n建議模型: ${fileAnalysis.suggestedModels.join(', ')}`;
       }
 
       const result = await runMcpPipeline(
         selectedMcp,
         models,
-        { prompt, imageDescription },
+        { prompt, fileDescription },
         lorebook
       );
 
@@ -104,22 +107,22 @@ export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: Genera
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-2">
-                參考圖片 (可選)
+                檔案附件 (圖片/影片/文字)
               </label>
               <div className="relative">
                 <input
                   type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  id="image-upload"
+                  accept="image/*,video/*,.txt,.doc,.docx,.pdf"
+                  onChange={handleFileUpload}
+                  id="file-upload"
                   className="hidden"
                 />
                 <label
-                  htmlFor="image-upload"
+                  htmlFor="file-upload"
                   className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
                 >
                   <Upload size={20} />
-                  {image ? `已選擇: ${image.name}` : '上傳圖片'}
+                  {attachedFile ? `已選擇: ${attachedFile.name}` : '上傳檔案 (圖片/影片/文字)'}
                 </label>
               </div>
             </div>
@@ -143,7 +146,7 @@ export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: Genera
           <button
             onClick={handleGenerate}
             disabled={isGenerating || !prompt.trim()}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-slate-600 disabled:to-slate-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 disabled:from-stone-400 disabled:to-stone-500 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed"
           >
             <Zap size={20} />
             {isGenerating ? currentStep : '啟動引擎'}

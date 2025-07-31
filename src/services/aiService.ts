@@ -3,7 +3,7 @@ import { ModelConfig, MCPConfig, GeneratorOutput, LorebookEntry, FileAnalysis, M
 export async function runMcpPipeline(
   mcp: MCPConfig,
   models: ModelConfig[],
-  input: { prompt: string; imageDescription?: string },
+  input: { prompt: string; fileDescription?: string },
   lorebook: LorebookEntry[] = []
 ): Promise<GeneratorOutput> {
   let stepResults: Record<string, any> = { input };
