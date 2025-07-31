@@ -63,29 +63,29 @@ export function LibraryView({ creations, onUpdateCreation, onDeleteCreation }: L
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">創作庫</h2>
-          <p className="text-slate-400">管理您的創意作品</p>
+          <h2 className="text-2xl font-bold text-stone-800">創作庫</h2>
+          <p className="text-stone-600">管理您的創意作品</p>
         </div>
         
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-500" size={20} />
             <input
               type="text"
               placeholder="搜尋創作..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="pl-10 pr-4 py-2 bg-white border border-stone-300 rounded-lg text-stone-800 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
           </div>
           
-          <div className="flex bg-slate-700/50 border border-slate-600 rounded-lg">
+          <div className="flex bg-white border border-stone-300 rounded-lg">
             <button
               onClick={() => setViewMode('grid')}
               className={`p-2 transition-colors ${
                 viewMode === 'grid' 
-                  ? 'bg-purple-600 text-white' 
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-amber-600 text-white' 
+                  : 'text-stone-600 hover:text-stone-800'
               }`}
             >
               <Grid size={20} />
@@ -94,8 +94,8 @@ export function LibraryView({ creations, onUpdateCreation, onDeleteCreation }: L
               onClick={() => setViewMode('list')}
               className={`p-2 transition-colors ${
                 viewMode === 'list' 
-                  ? 'bg-purple-600 text-white' 
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-amber-600 text-white' 
+                  : 'text-stone-600 hover:text-stone-800'
               }`}
             >
               <List size={20} />
@@ -108,10 +108,10 @@ export function LibraryView({ creations, onUpdateCreation, onDeleteCreation }: L
       {filteredCreations.length === 0 && (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">📚</div>
-          <h3 className="text-xl font-semibold text-white mb-2">
+          <h3 className="text-xl font-semibold text-stone-800 mb-2">
             {searchTerm ? '未找到匹配的創作' : '創作庫是空的'}
           </h3>
-          <p className="text-slate-400">
+          <p className="text-stone-600">
             {searchTerm ? '嘗試使用不同的搜尋詞' : '開始創作您的第一個故事吧！'}
           </p>
         </div>
@@ -121,9 +121,9 @@ export function LibraryView({ creations, onUpdateCreation, onDeleteCreation }: L
       {viewMode === 'grid' && filteredCreations.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredCreations.map(creation => (
-            <div key={creation.id} className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden hover:border-slate-600 transition-all duration-200 group">
+            <div key={creation.id} className="bg-stone-200/50 border border-stone-300 rounded-xl overflow-hidden hover:border-stone-400 transition-all duration-200 group">
               {/* Thumbnail */}
-              <div className="aspect-video bg-slate-700 relative overflow-hidden">
+              <div className="aspect-video bg-stone-300 relative overflow-hidden">
                 {creation.thumbnailUrl ? (
                   <img 
                     src={creation.thumbnailUrl} 
@@ -167,7 +167,7 @@ export function LibraryView({ creations, onUpdateCreation, onDeleteCreation }: L
                       type="text"
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 bg-white border border-stone-300 rounded text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                       autoFocus
                     />
                     <div className="flex gap-2">
@@ -179,7 +179,7 @@ export function LibraryView({ creations, onUpdateCreation, onDeleteCreation }: L
                       </button>
                       <button
                         onClick={handleCancelEdit}
-                        className="flex-1 px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded transition-colors"
+                        className="flex-1 px-3 py-1 bg-stone-400 hover:bg-stone-500 text-white text-sm rounded transition-colors"
                       >
                         取消
                       </button>
@@ -187,10 +187,10 @@ export function LibraryView({ creations, onUpdateCreation, onDeleteCreation }: L
                   </div>
                 ) : (
                   <>
-                    <h3 className="font-semibold text-white mb-2 line-clamp-2">
+                    <h3 className="font-semibold text-stone-800 mb-2 line-clamp-2">
                       {creation.title}
                     </h3>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-stone-500">
                       {new Date(creation.createdAt).toLocaleDateString('zh-TW')}
                     </p>
                   </>
@@ -205,10 +205,10 @@ export function LibraryView({ creations, onUpdateCreation, onDeleteCreation }: L
       {viewMode === 'list' && filteredCreations.length > 0 && (
         <div className="space-y-3">
           {filteredCreations.map(creation => (
-            <div key={creation.id} className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 hover:border-slate-600 transition-colors">
+            <div key={creation.id} className="bg-stone-200/50 border border-stone-300 rounded-xl p-4 hover:border-stone-400 transition-colors">
               <div className="flex items-center gap-4">
                 {/* Thumbnail */}
-                <div className="w-16 h-16 bg-slate-700 rounded-lg overflow-hidden flex-shrink-0">
+                <div className="w-16 h-16 bg-stone-300 rounded-lg overflow-hidden flex-shrink-0">
                   {creation.thumbnailUrl ? (
                     <img 
                       src={creation.thumbnailUrl} 
@@ -230,7 +230,7 @@ export function LibraryView({ creations, onUpdateCreation, onDeleteCreation }: L
                         type="text"
                         value={newTitle}
                         onChange={(e) => setNewTitle(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-2 bg-white border border-stone-300 rounded text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
                         autoFocus
                       />
                       <div className="flex gap-2">
@@ -242,7 +242,7 @@ export function LibraryView({ creations, onUpdateCreation, onDeleteCreation }: L
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded transition-colors"
+                          className="px-3 py-1 bg-stone-400 hover:bg-stone-500 text-white text-sm rounded transition-colors"
                         >
                           取消
                         </button>
@@ -250,10 +250,10 @@ export function LibraryView({ creations, onUpdateCreation, onDeleteCreation }: L
                     </div>
                   ) : (
                     <>
-                      <h3 className="font-semibold text-white mb-1 truncate">
+                      <h3 className="font-semibold text-stone-800 mb-1 truncate">
                         {creation.title}
                       </h3>
-                      <p className="text-sm text-slate-400">
+                      <p className="text-sm text-stone-500">
                         建立於 {new Date(creation.createdAt).toLocaleDateString('zh-TW')}
                       </p>
                     </>
@@ -264,14 +264,14 @@ export function LibraryView({ creations, onUpdateCreation, onDeleteCreation }: L
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     onClick={() => setSelectedCreation(creation)}
-                    className="p-2 text-slate-400 hover:text-white transition-colors"
+                    className="p-2 text-stone-500 hover:text-stone-800 transition-colors"
                     title="檢視"
                   >
                     <Eye size={18} />
                   </button>
                   <button
                     onClick={() => handleEditTitle(creation)}
-                    className="p-2 text-slate-400 hover:text-white transition-colors"
+                    className="p-2 text-stone-500 hover:text-stone-800 transition-colors"
                     title="編輯標題"
                   >
                     <Edit2 size={18} />

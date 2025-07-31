@@ -95,6 +95,18 @@ async function callAiModel(model: ModelConfig, prompt: string): Promise<string> 
     return await callGoogleAI(model, prompt);
   } else if (model.provider === 'ollama') {
     return await callOllamaAI(model, prompt);
+  } else if (model.provider === 'openai') {
+    return await callOpenAI(model, prompt);
+  } else if (model.provider === 'anthropic') {
+    return await callAnthropicAI(model, prompt);
+  } else if (model.provider === 'azure') {
+    return await callAzureAI(model, prompt);
+  } else if (model.provider === 'huggingface') {
+    return await callHuggingFaceAI(model, prompt);
+  } else if (model.provider === 'cohere') {
+    return await callCohereAI(model, prompt);
+  } else if (model.provider === 'palm') {
+    return await callPaLMAI(model, prompt);
   }
   throw new Error(`Unsupported provider: ${model.provider}`);
 }
@@ -143,6 +155,138 @@ async function callOllamaAI(model: ModelConfig, prompt: string): Promise<string>
   return data.response || 'No response generated';
 }
 
+async function callOpenAI(model: ModelConfig, prompt: string): Promise<string> {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${model.apiKey}`
+    },
+    body: JSON.stringify({
+      model: model.model || 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 2000
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenAI API error: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || 'No response generated';
+}
+
+async function callAnthropicAI(model: ModelConfig, prompt: string): Promise<string> {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': model.apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: model.model || 'claude-3-sonnet-20240229',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Anthropic API error: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.content?.[0]?.text || 'No response generated';
+}
+
+async function callAzureAI(model: ModelConfig, prompt: string): Promise<string> {
+  const baseUrl = model.baseUrl || 'https://your-resource.openai.azure.com';
+  const response = await fetch(`${baseUrl}/openai/deployments/${model.model || 'gpt-35-turbo'}/chat/completions?api-version=2023-12-01-preview`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': model.apiKey
+    },
+    body: JSON.stringify({
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 2000
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Azure OpenAI API error: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || 'No response generated';
+}
+
+async function callHuggingFaceAI(model: ModelConfig, prompt: string): Promise<string> {
+  const response = await fetch(`https://api-inference.huggingface.co/models/${model.model || 'microsoft/DialoGPT-medium'}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${model.apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      inputs: prompt,
+      parameters: { max_length: 2000 }
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`HuggingFace API error: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data[0]?.generated_text || data.generated_text || 'No response generated';
+}
+
+async function callCohereAI(model: ModelConfig, prompt: string): Promise<string> {
+  const response = await fetch('https://api.cohere.ai/v1/generate', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${model.apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: model.model || 'command',
+      prompt: prompt,
+      max_tokens: 2000
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Cohere API error: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.generations?.[0]?.text || 'No response generated';
+}
+
+async function callPaLMAI(model: ModelConfig, prompt: string): Promise<string> {
+  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/text-bison-001:generateText', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': model.apiKey
+    },
+    body: JSON.stringify({
+      prompt: { text: prompt },
+      temperature: 0.7,
+      candidateCount: 1
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`PaLM API error: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.candidates?.[0]?.output || 'No response generated';
+}
+
 async function generateImage(model: ModelConfig, prompt: string): Promise<string> {
   if (model.provider !== 'google') {
     throw new Error('Image generation only supported with Google AI');
@@ -154,12 +298,12 @@ async function generateImage(model: ModelConfig, prompt: string): Promise<string
   const ctx = canvas.getContext('2d')!;
   
   const gradient = ctx.createLinearGradient(0, 0, 400, 300);
-  gradient.addColorStop(0, '#1a1a2e');
-  gradient.addColorStop(1, '#16213e');
+  gradient.addColorStop(0, '#d4c4a8');
+  gradient.addColorStop(1, '#b8a082');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 400, 300);
   
-  ctx.fillStyle = 'white';
+  ctx.fillStyle = '#8b7355';
   ctx.font = '16px Arial';
   ctx.textAlign = 'center';
   ctx.fillText('AI 生成圖片', 200, 150);
@@ -178,18 +322,32 @@ export async function analyzeFile(file: File, models: ModelConfig[]): Promise<Fi
 
   if (fileType.startsWith('image/')) {
     contentType = 'image';
-    suggestedModels = models.filter(m => m.provider === 'google').map(m => m.id);
+    suggestedModels = models.filter(m => 
+      ['google', 'openai', 'anthropic'].includes(m.provider) || m.name.toLowerCase().includes('vision')
+    ).slice(0, 3).map(m => m.id);
+    confidence = 0.9;
   } else if (fileType.startsWith('video/')) {
     contentType = 'video';
-    suggestedModels = models.filter(m => m.provider === 'google').map(m => m.id);
+    suggestedModels = models.filter(m => 
+      ['google', 'openai'].includes(m.provider) || m.name.toLowerCase().includes('video')
+    ).slice(0, 2).map(m => m.id);
     extractedContent = `視頻檔案: ${file.name}, 大小: ${(file.size / 1024 / 1024).toFixed(2)}MB`;
+    confidence = 0.85;
   } else if (fileType.startsWith('audio/')) {
     contentType = 'audio';
-    suggestedModels = models.filter(m => m.provider === 'google').map(m => m.id);
+    suggestedModels = models.filter(m => 
+      ['google', 'openai', 'azure'].includes(m.provider) || m.name.toLowerCase().includes('audio')
+    ).slice(0, 2).map(m => m.id);
     extractedContent = `音頻檔案: ${file.name}, 大小: ${(file.size / 1024 / 1024).toFixed(2)}MB`;
+    confidence = 0.8;
   } else if (fileType.startsWith('text/') || fileType.includes('document') || fileType.includes('pdf')) {
     contentType = 'document';
-    suggestedModels = models.map(m => m.id);
+    const prioritizedModels = models.sort((a, b) => {
+      const priority = { 'anthropic': 3, 'openai': 2, 'google': 1, 'ollama': 0 };
+      return (priority[b.provider as keyof typeof priority] || 0) - (priority[a.provider as keyof typeof priority] || 0);
+    });
+    suggestedModels = prioritizedModels.map(m => m.id);
+    
     if (fileType.startsWith('text/')) {
       try {
         extractedContent = await file.text();
@@ -200,12 +358,17 @@ export async function analyzeFile(file: File, models: ModelConfig[]): Promise<Fi
       }
     } else {
       extractedContent = `文檔檔案: ${file.name}, 類型: ${fileType}`;
+      confidence = 0.7;
     }
   } else {
     contentType = 'document';
     suggestedModels = models.map(m => m.id);
     extractedContent = `未知檔案類型: ${file.name} (${fileType})`;
     confidence = 0.3;
+  }
+
+  if (suggestedModels.length === 0 && models.length > 0) {
+    suggestedModels = [models[0].id];
   }
 
   return {

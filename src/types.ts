@@ -5,7 +5,7 @@ export interface User {
 export interface ModelConfig {
   id: string;
   name: string;
-  provider: 'google' | 'ollama';
+  provider: 'google' | 'ollama' | 'openai' | 'anthropic' | 'azure' | 'huggingface' | 'cohere' | 'palm';
   apiKey: string;
   baseUrl?: string;
   model?: string;

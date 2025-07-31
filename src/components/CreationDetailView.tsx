@@ -56,7 +56,7 @@ export function CreationDetailView({ creation, onBack, onUpdate, onDelete }: Cre
         <div className="flex items-start gap-4">
           <button
             onClick={onBack}
-            className="p-2 text-slate-400 hover:text-white transition-colors"
+            className="p-2 text-stone-500 hover:text-stone-700 transition-colors"
           >
             <ArrowLeft size={24} />
           </button>
@@ -68,7 +68,7 @@ export function CreationDetailView({ creation, onBack, onUpdate, onDelete }: Cre
                   type="text"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="text-2xl font-bold bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 w-full max-w-2xl"
+                  className="text-2xl font-bold bg-stone-200 border border-stone-300 rounded-lg px-4 py-2 text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500 w-full max-w-2xl"
                   autoFocus
                 />
                 <div className="flex gap-2">
@@ -83,7 +83,7 @@ export function CreationDetailView({ creation, onBack, onUpdate, onDelete }: Cre
                       setIsEditingTitle(false);
                       setNewTitle(creation.title);
                     }}
-                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors"
+                    className="px-4 py-2 bg-stone-400 hover:bg-stone-500 text-white rounded-lg transition-colors"
                   >
                     取消
                   </button>
@@ -91,8 +91,8 @@ export function CreationDetailView({ creation, onBack, onUpdate, onDelete }: Cre
               </div>
             ) : (
               <>
-                <h1 className="text-2xl font-bold text-white mb-2">{creation.title}</h1>
-                <p className="text-slate-400">
+                <h1 className="text-2xl font-bold text-stone-800 mb-2">{creation.title}</h1>
+                <p className="text-stone-600">
                   建立於 {new Date(creation.createdAt).toLocaleDateString('zh-TW', {
                     year: 'numeric',
                     month: 'long',
@@ -109,7 +109,7 @@ export function CreationDetailView({ creation, onBack, onUpdate, onDelete }: Cre
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsEditingTitle(true)}
-            className="p-2 text-slate-400 hover:text-white transition-colors"
+            className="p-2 text-stone-500 hover:text-stone-700 transition-colors"
             title="編輯標題"
           >
             <Edit2 size={20} />
@@ -125,9 +125,9 @@ export function CreationDetailView({ creation, onBack, onUpdate, onDelete }: Cre
       </div>
 
       {/* Content */}
-      <div className="bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden">
+      <div className="bg-stone-200/50 border border-stone-300 rounded-2xl overflow-hidden">
         {/* Tabs */}
-        <div className="flex border-b border-slate-700">
+        <div className="flex border-b border-stone-300">
           {[
             { key: 'narrative', label: '文字輸出', icon: '📝' },
             { key: 'visual', label: '互動播放', icon: '🎬' },
@@ -137,8 +137,8 @@ export function CreationDetailView({ creation, onBack, onUpdate, onDelete }: Cre
               key={tab.key}
               className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors ${
                 activeTab === tab.key
-                  ? 'text-purple-400 border-b-2 border-purple-400 bg-slate-700/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700/20'
+                  ? 'text-amber-600 border-b-2 border-amber-600 bg-stone-100'
+                  : 'text-stone-600 hover:text-stone-800 hover:bg-stone-100'
               }`}
               onClick={() => setActiveTab(tab.key as OutputTab)}
             >
@@ -153,26 +153,26 @@ export function CreationDetailView({ creation, onBack, onUpdate, onDelete }: Cre
           {activeTab === 'narrative' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white">故事敘述</h3>
+                <h3 className="text-lg font-semibold text-stone-800">故事敘述</h3>
                 <div className="flex gap-2">
                   <button
                     onClick={() => copyToClipboard(creation.output.narrative)}
-                    className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 bg-stone-600 hover:bg-stone-700 text-white rounded-lg transition-colors"
                   >
                     <Copy size={16} />
                     複製
                   </button>
                   <button
                     onClick={() => downloadAsFile(creation.output.narrative, `${creation.title}-故事.txt`)}
-                    className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 bg-stone-600 hover:bg-stone-700 text-white rounded-lg transition-colors"
                   >
                     <Download size={16} />
                     下載
                   </button>
                 </div>
               </div>
-              <div className="bg-slate-700/30 border border-slate-600 rounded-lg p-4 max-h-96 overflow-y-auto">
-                <pre className="text-slate-300 whitespace-pre-wrap font-mono text-sm leading-relaxed">
+              <div className="bg-stone-100 border border-stone-300 rounded-lg p-4 max-h-96 overflow-y-auto">
+                <pre className="text-stone-700 whitespace-pre-wrap font-mono text-sm leading-relaxed">
                   {creation.output.narrative}
                 </pre>
               </div>
@@ -181,7 +181,7 @@ export function CreationDetailView({ creation, onBack, onUpdate, onDelete }: Cre
 
           {activeTab === 'visual' && (
             <div>
-              <h3 className="text-lg font-semibold text-white mb-4">互動故事播放</h3>
+              <h3 className="text-lg font-semibold text-stone-800 mb-4">互動故事播放</h3>
               <InteractivePlayer storyGraph={creation.output.storyGraph} />
             </div>
           )}
@@ -189,25 +189,25 @@ export function CreationDetailView({ creation, onBack, onUpdate, onDelete }: Cre
           {activeTab === 'code' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white">程式碼輸出</h3>
+                <h3 className="text-lg font-semibold text-stone-800">程式碼輸出</h3>
                 <div className="flex gap-2">
                   <button
                     onClick={() => copyToClipboard(creation.output.code)}
-                    className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 bg-stone-600 hover:bg-stone-700 text-white rounded-lg transition-colors"
                   >
                     <Copy size={16} />
                     複製
                   </button>
                   <button
                     onClick={() => downloadAsFile(creation.output.code, `${creation.title}-程式碼.json`)}
-                    className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 bg-stone-600 hover:bg-stone-700 text-white rounded-lg transition-colors"
                   >
                     <Download size={16} />
                     下載
                   </button>
                 </div>
               </div>
-              <div className="bg-slate-900/50 border border-slate-600 rounded-lg p-4 max-h-96 overflow-auto">
+              <div className="bg-stone-800 border border-stone-600 rounded-lg p-4 max-h-96 overflow-auto">
                 <pre className="text-green-400 font-mono text-sm">
                   {creation.output.code}
                 </pre>

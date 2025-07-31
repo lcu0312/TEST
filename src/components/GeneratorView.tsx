@@ -86,10 +86,10 @@ export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: Genera
 
   return (
     <div className="space-y-6">
-      <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
+      <div className="bg-stone-200/50 border border-stone-300 rounded-2xl p-6">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-stone-700 mb-2">
               創意想法
             </label>
             <textarea
@@ -97,13 +97,13 @@ export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: Genera
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               rows={4}
-              className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+              className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-800 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-stone-700 mb-2">
                 參考圖片 (可選)
               </label>
               <div className="relative">
@@ -116,7 +116,7 @@ export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: Genera
                 />
                 <label
                   htmlFor="image-upload"
-                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-300 hover:bg-slate-700 transition-colors cursor-pointer"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
                 >
                   <Upload size={20} />
                   {image ? `已選擇: ${image.name}` : '上傳圖片'}
@@ -125,13 +125,13 @@ export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: Genera
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-stone-700 mb-2">
                 創意管線
               </label>
               <select
                 value={selectedMcpId}
                 onChange={(e) => setSelectedMcpId(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 {mcps.map(mcp => (
                   <option key={mcp.id} value={mcp.id}>{mcp.name}</option>
@@ -152,8 +152,8 @@ export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: Genera
       </div>
 
       {output && (
-        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden">
-          <div className="flex border-b border-slate-700">
+        <div className="bg-stone-200/50 border border-stone-300 rounded-2xl overflow-hidden">
+          <div className="flex border-b border-stone-300">
             {[
               { key: 'narrative', label: '文字輸出', icon: '📝' },
               { key: 'visual', label: '互動播放', icon: '🎬' },
@@ -163,8 +163,8 @@ export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: Genera
                 key={tab.key}
                 className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors ${
                   activeTab === tab.key
-                    ? 'text-purple-400 border-b-2 border-purple-400 bg-slate-700/30'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/20'
+                    ? 'text-amber-600 border-b-2 border-amber-600 bg-stone-300/50'
+                    : 'text-stone-600 hover:text-stone-800 hover:bg-stone-300/30'
                 }`}
                 onClick={() => setActiveTab(tab.key as any)}
               >
@@ -181,14 +181,14 @@ export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: Genera
                   <h3 className="text-lg font-semibold text-white">故事敘述</h3>
                   <button
                     onClick={() => copyToClipboard(output.narrative)}
-                    className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 bg-stone-400 hover:bg-stone-500 text-white rounded-lg transition-colors"
                   >
                     <Copy size={16} />
                     複製
                   </button>
                 </div>
-                <div className="bg-slate-700/30 border border-slate-600 rounded-lg p-4">
-                  <pre className="text-slate-300 whitespace-pre-wrap font-mono text-sm leading-relaxed">
+                <div className="bg-stone-100 border border-stone-300 rounded-lg p-4">
+                  <pre className="text-stone-600 whitespace-pre-wrap font-mono text-sm leading-relaxed">
                     {output.narrative}
                   </pre>
                 </div>
@@ -208,13 +208,13 @@ export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: Genera
                   <h3 className="text-lg font-semibold text-white">程式碼輸出</h3>
                   <button
                     onClick={() => copyToClipboard(output.code)}
-                    className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 bg-stone-400 hover:bg-stone-500 text-white rounded-lg transition-colors"
                   >
                     <Copy size={16} />
                     複製
                   </button>
                 </div>
-                <div className="bg-slate-900/50 border border-slate-600 rounded-lg p-4 overflow-x-auto">
+                <div className="bg-stone-800 border border-stone-600 rounded-lg p-4 overflow-x-auto">
                   <pre className="text-green-400 font-mono text-sm">
                     {output.code}
                   </pre>
@@ -223,7 +223,7 @@ export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: Genera
             )}
           </div>
 
-          <div className="border-t border-slate-700 p-4">
+          <div className="border-t border-stone-300 p-4">
             <button
               onClick={handleSave}
               className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Mic, MicOff, Volume2, Share2, Settings, Zap, Users } from 'lucide-react';
+import { Send, Paperclip, Mic, MicOff, Volume2, Share2, Settings, Zap, Users, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ModelConfig, ChatMessage, FileAnalysis, MultiAIWorkflow } from '../types';
 import { sendChatMessage, analyzeFile, createDefaultWorkflow } from '../services/aiService';
 import { generateId } from '../utils';
@@ -20,6 +20,7 @@ export function ChatView({ models }: ChatViewProps) {
   const [selectedOutputModel, setSelectedOutputModel] = useState(models[0]?.id || '');
   const [currentWorkflow, setCurrentWorkflow] = useState<MultiAIWorkflow | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -177,203 +178,278 @@ export function ChatView({ models }: ChatViewProps) {
     }
   };
 
+  const downloadFile = (file: File) => {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportChatHistory = () => {
+    const chatData = {
+      exportDate: new Date().toISOString(),
+      totalMessages: messages.length,
+      messages: messages.map(msg => ({
+        ...msg,
+        attachments: msg.attachments?.map(file => ({
+          name: file.name,
+          type: file.type,
+          size: file.size
+        }))
+      }))
+    };
+    
+    const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chat-history-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Model Selection and AI Collaboration Controls */}
-      <div className="bg-slate-800/50 border-b border-slate-700 p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-slate-300">AI 模型：</label>
-            <select
-              value={selectedModelId}
-              onChange={(e) => setSelectedModelId(e.target.value)}
-              className="px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              {models.map(model => (
-                <option key={model.id} value={model.id}>{model.name}</option>
-              ))}
-            </select>
-          </div>
-          
+    <div className="flex h-full bg-gradient-to-br from-stone-100 via-amber-50 to-stone-100">
+      {/* Collapsible Sidebar */}
+      <div className={`${isCollapsed ? 'w-12' : 'w-64'} transition-all duration-300 bg-stone-200 border-r border-stone-300 flex flex-col resize-x overflow-auto`}>
+        <div className="p-3 border-b border-stone-300 flex items-center justify-between">
+          {!isCollapsed && <h3 className="font-medium text-stone-700">對話記錄</h3>}
           <button
-            onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
-            className="flex items-center gap-2 px-3 py-2 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600 rounded-lg text-slate-300 hover:text-white transition-colors"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-1 text-stone-500 hover:text-stone-700 transition-colors"
           >
-            <Settings size={16} />
-            高級選項
+            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </button>
         </div>
+        {!isCollapsed && (
+          <div className="flex-1 p-3">
+            <button
+              onClick={exportChatHistory}
+              className="w-full px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              <Download size={14} />
+              匯出對話記錄
+            </button>
+          </div>
+        )}
+      </div>
 
-        {showAdvancedOptions && (
-          <div className="bg-slate-700/30 border border-slate-600 rounded-lg p-4 space-y-3">
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col min-w-96">
+        {/* Header */}
+        <div className="bg-stone-200/50 border-b border-stone-300 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-stone-800">智能對話</h2>
+              <p className="text-sm text-stone-600">與 AI 進行多模態對話</p>
+            </div>
+            
             <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 text-sm text-slate-300">
-                <input
-                  type="checkbox"
-                  checked={enableMultiAI}
-                  onChange={(e) => setEnableMultiAI(e.target.checked)}
-                  className="rounded border-slate-500 bg-slate-700 text-purple-600 focus:ring-purple-500"
-                />
-                <Users size={16} />
-                啟用多 AI 協作
-              </label>
-            </div>
-            
-            {enableMultiAI && (
-              <div className="flex items-center gap-4 pl-6">
-                <label className="text-sm font-medium text-slate-300">輸出模型：</label>
-                <select
-                  value={selectedOutputModel}
-                  onChange={(e) => setSelectedOutputModel(e.target.value)}
-                  className="px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  {models.map(model => (
-                    <option key={model.id} value={model.id}>{model.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+              <select
+                value={selectedModelId}
+                onChange={(e) => setSelectedModelId(e.target.value)}
+                className="px-3 py-2 bg-white border border-stone-300 rounded-lg text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              >
+                {models.map(model => (
+                  <option key={model.id} value={model.id}>{model.name}</option>
+                ))}
+              </select>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">🤖</div>
-            <h3 className="text-xl font-semibold text-white mb-2">開始對話</h3>
-            <p className="text-slate-400">與 AI 助手開始您的創意對話</p>
-          </div>
-        )}
-
-        {messages.map(message => (
-          <ChatMessageBubble
-            key={message.id}
-            message={message}
-            onSpeak={speakMessage}
-            onShare={shareMessage}
-            models={models}
-          />
-        ))}
-
-        {isSending && (
-          <div className="flex justify-start">
-            <div className="bg-slate-700/50 border border-slate-600 rounded-2xl rounded-bl-md p-4 max-w-xs">
-              <div className="flex items-center gap-2 text-slate-400">
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                </div>
-                <span className="text-sm">AI 正在思考...</span>
-              </div>
+              <button
+                onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                className={`p-2 rounded-lg transition-colors ${
+                  showAdvancedOptions 
+                    ? 'bg-amber-600 text-white' 
+                    : 'bg-stone-300 hover:bg-stone-400 text-stone-700'
+                }`}
+                title="進階選項"
+              >
+                <Settings size={18} />
+              </button>
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Input Area */}
-      <div className="bg-slate-800/50 border-t border-slate-700 p-4">
-        {/* Attachments with AI Analysis */}
-        {attachments.length > 0 && (
-          <div className="mb-3 space-y-2">
-            <div className="flex flex-wrap gap-2">
-              {attachments.map((file, index) => {
-                const analysis = fileAnalyses[index];
-                return (
-                  <div key={index} className="bg-slate-700/50 border border-slate-600 rounded-lg p-3 min-w-48">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-slate-300 truncate max-w-32">
-                        {file.name}
-                      </span>
-                      <button
-                        onClick={() => removeAttachment(index)}
-                        className="text-slate-400 hover:text-red-400 transition-colors"
-                      >
-                        ×
-                      </button>
-                    </div>
-                    
-                    {analysis && (
-                      <div className="text-xs text-slate-400 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Zap size={12} />
-                          <span>類型: {analysis.contentType}</span>
-                        </div>
-                        {analysis.suggestedModels.length > 0 && (
-                          <div>建議模型: {analysis.suggestedModels.slice(0, 2).map((id: string) => models.find((m: ModelConfig) => m.id === id)?.name).filter(Boolean).join(', ')}</div>
-                        )}
-                        <div className="text-green-400">信心度: {(analysis.confidence * 100).toFixed(0)}%</div>
-                      </div>
-                    )}
+          {showAdvancedOptions && (
+            <div className="mt-4 p-4 bg-stone-100 border border-stone-300 rounded-lg space-y-3">
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-sm text-stone-700">
+                  <input
+                    type="checkbox"
+                    checked={enableMultiAI}
+                    onChange={(e) => setEnableMultiAI(e.target.checked)}
+                    className="rounded border-stone-400 bg-white text-amber-600 focus:ring-amber-500"
+                  />
+                  啟用多 AI 協作
+                </label>
+              </div>
+              
+              {enableMultiAI && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-stone-600 mb-1">輸出模型</label>
+                    <select
+                      value={selectedOutputModel}
+                      onChange={(e) => setSelectedOutputModel(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-stone-300 rounded text-stone-800 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    >
+                      {models.map(model => (
+                        <option key={model.id} value={model.id}>{model.name}</option>
+                      ))}
+                    </select>
                   </div>
-                );
-              })}
-            </div>
-            
-            {enableMultiAI && currentWorkflow && (
-              <div className="bg-purple-900/30 border border-purple-600/50 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-purple-300 mb-2">
-                  <Users size={16} />
-                  <span className="text-sm font-medium">多 AI 協作工作流程</span>
                 </div>
-                <div className="text-xs text-slate-400">
-                  {currentWorkflow.tasks.length} 個任務 • 協調模型: {models.find(m => m.id === currentWorkflow.coordinatorModelId)?.name}
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.length === 0 && (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🤖</div>
+              <h3 className="text-xl font-semibold text-stone-800 mb-2">開始對話</h3>
+              <p className="text-stone-600">與 AI 助手開始您的創意對話</p>
+            </div>
+          )}
+
+          {messages.map(message => (
+            <ChatMessageBubble
+              key={message.id}
+              message={message}
+              onSpeak={speakMessage}
+              onShare={shareMessage}
+              onDownload={downloadFile}
+              models={models}
+            />
+          ))}
+
+          {isSending && (
+            <div className="flex justify-start">
+              <div className="bg-stone-200 border border-stone-300 rounded-2xl rounded-bl-md p-4 max-w-xs">
+                <div className="flex items-center gap-2 text-stone-600">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-stone-600 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-stone-600 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                    <div className="w-2 h-2 bg-stone-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                  </div>
+                  <span className="text-sm">AI 正在思考...</span>
                 </div>
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
 
-        <div className="flex items-end gap-3">
-          <div className="flex-1">
-            <textarea
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="輸入訊息... (Shift+Enter 換行)"
-              rows={1}
-              className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
-              style={{ minHeight: '48px', maxHeight: '120px' }}
-            />
-          </div>
+        {/* Input Area */}
+        <div className="bg-stone-200/50 border-t border-stone-300 p-4">
+          {attachments.length > 0 && (
+            <div className="mb-3 space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {attachments.map((file, index) => {
+                  const analysis = fileAnalyses[index];
+                  return (
+                    <div key={index} className="bg-white border border-stone-300 rounded-lg p-3 min-w-48">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-stone-700 truncate max-w-32">
+                          {file.name}
+                        </span>
+                        <button
+                          onClick={() => removeAttachment(index)}
+                          className="text-stone-500 hover:text-red-500 transition-colors"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      
+                      {analysis && (
+                        <div className="text-xs bg-amber-50 border border-amber-200 rounded p-2 space-y-1">
+                          <div className="flex items-center gap-2 text-amber-800">
+                            <Zap size={12} />
+                            <span className="font-medium">AI 自動偵測</span>
+                          </div>
+                          <div className="text-amber-700">類型: {analysis.contentType}</div>
+                          {analysis.suggestedModels.length > 0 && (
+                            <div className="text-amber-700">
+                              <span className="font-medium">建議模型:</span> {analysis.suggestedModels.slice(0, 2).map((id: string) => models.find((m: ModelConfig) => m.id === id)?.name).filter(Boolean).join(', ')}
+                            </div>
+                          )}
+                          <div className="text-green-600 font-medium">信心度: {(analysis.confidence * 100).toFixed(0)}%</div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {enableMultiAI && currentWorkflow && (
+                <div className="bg-amber-100 border border-amber-300 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-amber-800 mb-2">
+                    <Users size={16} />
+                    <span className="text-sm font-medium">多 AI 協作工作流程</span>
+                  </div>
+                  <div className="text-xs text-amber-700">
+                    {currentWorkflow.tasks.length} 個任務 • 協調模型: {models.find(m => m.id === currentWorkflow.coordinatorModelId)?.name}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
-          <div className="flex gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*,video/*,audio/*,.txt,.doc,.docx,.pdf,.md,.json,.csv,.xml"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center justify-center w-12 h-12 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-colors"
-            >
-              <Paperclip size={20} />
-            </button>
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <textarea
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="輸入訊息... (Shift+Enter 換行)"
+                rows={1}
+                className="w-full px-4 py-3 bg-white border border-stone-300 rounded-xl text-stone-800 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+                style={{ minHeight: '48px', maxHeight: '120px' }}
+              />
+            </div>
 
-            <button
-              onClick={isRecording ? stopRecording : startRecording}
-              className={`flex items-center justify-center w-12 h-12 rounded-xl transition-colors ${
-                isRecording 
-                  ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse' 
-                  : 'bg-slate-700 hover:bg-slate-600 text-white'
-              }`}
-            >
-              {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
-            </button>
+            <div className="flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,video/*,audio/*,.txt,.doc,.docx,.pdf,.md,.json,.csv,.xml"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center justify-center w-12 h-12 bg-stone-300 hover:bg-stone-400 text-stone-700 rounded-xl transition-colors"
+              >
+                <Paperclip size={20} />
+              </button>
 
-            <button
-              onClick={handleSend}
-              disabled={(!inputMessage.trim() && attachments.length === 0) || isSending}
-              className="flex items-center justify-center w-12 h-12 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-xl transition-colors"
-            >
-              <Send size={20} />
-            </button>
+              <button
+                onClick={isRecording ? stopRecording : startRecording}
+                className={`flex items-center justify-center w-12 h-12 rounded-xl transition-colors ${
+                  isRecording 
+                    ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse' 
+                    : 'bg-stone-300 hover:bg-stone-400 text-stone-700'
+                }`}
+              >
+                {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
+              </button>
+
+              <button
+                onClick={handleSend}
+                disabled={(!inputMessage.trim() && attachments.length === 0) || isSending}
+                className="flex items-center justify-center w-12 h-12 bg-amber-600 hover:bg-amber-700 disabled:bg-stone-400 disabled:cursor-not-allowed text-white rounded-xl transition-colors"
+              >
+                <Send size={20} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -385,11 +461,13 @@ function ChatMessageBubble({
   message, 
   onSpeak, 
   onShare,
+  onDownload,
   models
 }: { 
   message: ChatMessage;
   onSpeak: (content: string) => void;
   onShare: (content: string) => void;
+  onDownload: (file: File) => void;
   models: ModelConfig[];
 }) {
   const isUser = message.role === 'user';
@@ -407,7 +485,7 @@ function ChatMessageBubble({
             onLoad={() => URL.revokeObjectURL(fileUrl)}
           />
           {analysis && (
-            <div className="text-xs text-slate-400 bg-slate-800/50 rounded px-2 py-1">
+            <div className="text-xs text-stone-600 bg-stone-100 rounded px-2 py-1">
               AI 分析: {analysis.contentType} • 信心度 {(analysis.confidence * 100).toFixed(0)}%
             </div>
           )}
@@ -423,7 +501,7 @@ function ChatMessageBubble({
             onLoadedData={() => URL.revokeObjectURL(fileUrl)}
           />
           {analysis && (
-            <div className="text-xs text-slate-400 bg-slate-800/50 rounded px-2 py-1">
+            <div className="text-xs text-stone-600 bg-stone-100 rounded px-2 py-1">
               視頻分析: {(file.size / 1024 / 1024).toFixed(2)}MB • 建議模型: {analysis.suggestedModels.slice(0, 1).map((id: string) => models.find((m: ModelConfig) => m.id === id)?.name).filter(Boolean).join(', ')}
             </div>
           )}
@@ -439,7 +517,7 @@ function ChatMessageBubble({
             onLoadedData={() => URL.revokeObjectURL(fileUrl)}
           />
           {analysis && (
-            <div className="text-xs text-slate-400 bg-slate-800/50 rounded px-2 py-1">
+            <div className="text-xs text-stone-600 bg-stone-100 rounded px-2 py-1">
               音頻分析: {(file.size / 1024 / 1024).toFixed(2)}MB • 建議模型: {analysis.suggestedModels.slice(0, 1).map((id: string) => models.find((m: ModelConfig) => m.id === id)?.name).filter(Boolean).join(', ')}
             </div>
           )}
@@ -449,12 +527,21 @@ function ChatMessageBubble({
       URL.revokeObjectURL(fileUrl);
       return (
         <div className="space-y-2">
-          <div className="bg-slate-600/50 border border-slate-500 rounded-lg px-3 py-2">
-            <span className="text-sm text-slate-300">{file.name}</span>
-            <div className="text-xs text-slate-400 mt-1">{file.type}</div>
+          <div className="bg-stone-200 border border-stone-300 rounded-lg px-3 py-2 flex items-center justify-between">
+            <div>
+              <span className="text-sm text-stone-700">{file.name}</span>
+              <div className="text-xs text-stone-500 mt-1">{file.type}</div>
+            </div>
+            <button
+              onClick={() => onDownload(file)}
+              className="p-2 text-amber-600 hover:text-amber-700 transition-colors"
+              title="下載檔案"
+            >
+              <Download size={16} />
+            </button>
           </div>
           {analysis && analysis.extractedContent && (
-            <div className="text-xs text-slate-400 bg-slate-800/50 rounded px-2 py-1 max-w-xs">
+            <div className="text-xs text-stone-600 bg-stone-100 rounded px-2 py-1 max-w-xs">
               內容預覽: {analysis.extractedContent.substring(0, 100)}...
             </div>
           )}
@@ -468,8 +555,8 @@ function ChatMessageBubble({
       <div className={`max-w-2xl ${isUser ? 'order-2' : 'order-1'}`}>
         <div className={`rounded-2xl p-4 ${
           isUser 
-            ? 'bg-purple-600 text-white rounded-br-md' 
-            : 'bg-slate-700/50 border border-slate-600 text-slate-100 rounded-bl-md'
+            ? 'bg-amber-600 text-white rounded-br-md' 
+            : 'bg-white border border-stone-300 text-stone-800 rounded-bl-md'
         }`}>
           {message.content && (
             <p className="whitespace-pre-wrap leading-relaxed mb-2">
@@ -488,12 +575,12 @@ function ChatMessageBubble({
           )}
 
           {message.workflow && (
-            <div className="mt-3 bg-purple-900/20 border border-purple-600/30 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-purple-300 mb-2">
+            <div className="mt-3 bg-amber-100 border border-amber-300 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-amber-800 mb-2">
                 <Users size={14} />
                 <span className="text-sm font-medium">多 AI 協作結果</span>
               </div>
-              <div className="text-xs text-slate-400 space-y-1">
+              <div className="text-xs text-amber-700 space-y-1">
                 <div>工作流程: {message.workflow.name}</div>
                 <div>任務數量: {message.workflow.tasks.length}</div>
                 <div>狀態: {message.workflow.status === 'completed' ? '已完成' : message.workflow.status === 'processing' ? '處理中' : '等待中'}</div>
@@ -505,7 +592,7 @@ function ChatMessageBubble({
           )}
         </div>
 
-        <div className={`flex items-center gap-2 mt-2 text-xs text-slate-400 ${
+        <div className={`flex items-center gap-2 mt-2 text-xs text-stone-500 ${
           isUser ? 'justify-end' : 'justify-start'
         }`}>
           <span>{new Date(message.timestamp).toLocaleTimeString()}</span>
@@ -514,14 +601,14 @@ function ChatMessageBubble({
             <>
               <button
                 onClick={() => onSpeak(message.content)}
-                className="p-1 hover:text-white transition-colors"
+                className="p-1 hover:text-stone-700 transition-colors"
                 title="朗讀"
               >
                 <Volume2 size={14} />
               </button>
               <button
                 onClick={() => onShare(message.content)}
-                className="p-1 hover:text-white transition-colors"
+                className="p-1 hover:text-stone-700 transition-colors"
                 title="分享"
               >
                 <Share2 size={14} />

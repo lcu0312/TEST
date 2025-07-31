@@ -75,18 +75,18 @@ export function SettingsModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-slate-700">
-          <h2 className="text-2xl font-bold text-white">設定</h2>
+      <div className="bg-stone-200 border border-stone-300 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-stone-300">
+          <h2 className="text-2xl font-bold text-stone-800">設定</h2>
           <button 
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors"
+            className="text-stone-600 hover:text-stone-800 transition-colors"
           >
             <X size={24} />
           </button>
         </div>
 
-        <div className="flex border-b border-slate-700">
+        <div className="flex border-b border-stone-300">
           {[
             { key: 'models', label: 'AI 模型' },
             { key: 'mcp', label: 'MCP 設定' },
@@ -96,8 +96,8 @@ export function SettingsModal({
               key={tab.key}
               className={`px-6 py-3 font-medium transition-colors ${
                 activeTab === tab.key
-                  ? 'text-purple-400 border-b-2 border-purple-400'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'text-amber-600 border-b-2 border-amber-600'
+                  : 'text-stone-600 hover:text-stone-800'
               }`}
               onClick={() => setActiveTab(tab.key as any)}
             >
@@ -177,10 +177,10 @@ function ModelConfigTab({
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">已配置的模型</h3>
+          <h3 className="text-lg font-semibold text-stone-800">已配置的模型</h3>
           <button
             onClick={() => {setEditingModel(null); setFormData({});}}
-            className="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
           >
             <Plus size={16} />
             新增
@@ -189,16 +189,16 @@ function ModelConfigTab({
         
         <div className="space-y-3">
           {configs.map(config => (
-            <div key={config.id} className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
+            <div key={config.id} className="bg-stone-100 border border-stone-300 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-medium text-white">{config.name}</h4>
-                  <p className="text-sm text-slate-400">{config.provider}</p>
+                  <h4 className="font-medium text-stone-800">{config.name}</h4>
+                  <p className="text-sm text-stone-600">{config.provider}</p>
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEdit(config)}
-                    className="p-2 text-slate-400 hover:text-white transition-colors"
+                    className="p-2 text-stone-600 hover:text-stone-800 transition-colors"
                   >
                     <Edit size={16} />
                   </button>
@@ -216,7 +216,7 @@ function ModelConfigTab({
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold text-white mb-4">
+        <h3 className="text-lg font-semibold text-stone-800 mb-4">
           {editingModel ? '編輯模型' : '新增模型'}
         </h3>
         
@@ -226,19 +226,25 @@ function ModelConfigTab({
             placeholder="模型名稱"
             value={formData.name || ''}
             onChange={e => setFormData({...formData, name: e.target.value})}
-            className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-800 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
             required
           />
           
           <select
             value={formData.provider || ''}
-            onChange={e => setFormData({...formData, provider: e.target.value as 'google' | 'ollama'})}
-            className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            onChange={e => setFormData({...formData, provider: e.target.value as ModelConfig['provider']})}
+            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
             required
           >
             <option value="">選擇提供商</option>
-            <option value="google">Google</option>
+            <option value="google">Google AI</option>
             <option value="ollama">Ollama</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="azure">Azure OpenAI</option>
+            <option value="huggingface">HuggingFace</option>
+            <option value="cohere">Cohere</option>
+            <option value="palm">PaLM</option>
           </select>
 
           <input
@@ -246,7 +252,7 @@ function ModelConfigTab({
             placeholder="API Key"
             value={formData.apiKey || ''}
             onChange={e => setFormData({...formData, apiKey: e.target.value})}
-            className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-800 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
             required
           />
 
@@ -257,14 +263,14 @@ function ModelConfigTab({
                 placeholder="Base URL (例如: http://localhost:11434)"
                 value={formData.baseUrl || ''}
                 onChange={e => setFormData({...formData, baseUrl: e.target.value})}
-                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-800 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
               <input
                 type="text"
                 placeholder="模型名稱 (例如: llama2)"
                 value={formData.model || ''}
                 onChange={e => setFormData({...formData, model: e.target.value})}
-                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-800 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </>
           )}
@@ -272,14 +278,14 @@ function ModelConfigTab({
           <div className="flex gap-3">
             <button 
               type="submit"
-              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
             >
               儲存
             </button>
             <button 
               type="button" 
               onClick={() => {setEditingModel(null); setFormData({});}}
-              className="flex-1 bg-slate-600 hover:bg-slate-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              className="flex-1 bg-stone-600 hover:bg-stone-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
             >
               取消
             </button>
@@ -352,7 +358,7 @@ function McpConfigTab({
           <h3 className="text-lg font-semibold text-white">已配置的 MCP</h3>
           <button
             onClick={() => {setEditingMcp(null); setFormData({});}}
-            className="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
           >
             <Plus size={16} />
             新增
@@ -361,16 +367,16 @@ function McpConfigTab({
         
         <div className="space-y-3">
           {mcps.map(mcp => (
-            <div key={mcp.id} className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
+            <div key={mcp.id} className="bg-stone-700/50 border border-stone-600 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-medium text-white">{mcp.name}</h4>
-                  <p className="text-sm text-slate-400">{mcp.steps.length} 個步驟</p>
+                  <p className="text-sm text-stone-600">{mcp.steps.length} 個步驟</p>
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEdit(mcp)}
-                    className="p-2 text-slate-400 hover:text-white transition-colors"
+                    className="p-2 text-stone-600 hover:text-stone-800 transition-colors"
                   >
                     <Edit size={16} />
                   </button>
@@ -398,7 +404,7 @@ function McpConfigTab({
             placeholder="MCP 名稱"
             value={formData.name || ''}
             onChange={e => setFormData({...formData, name: e.target.value})}
-            className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-800 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
             required
           />
 
@@ -408,7 +414,7 @@ function McpConfigTab({
               <button
                 type="button"
                 onClick={addStep}
-                className="flex items-center gap-2 px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded transition-colors"
+                className="flex items-center gap-2 px-3 py-1 bg-stone-600 hover:bg-stone-700 text-white text-sm rounded transition-colors"
               >
                 <Plus size={14} />
                 新增步驟
@@ -417,9 +423,9 @@ function McpConfigTab({
             
             <div className="space-y-3 max-h-60 overflow-y-auto">
               {(formData.steps || []).map((step, index) => (
-                <div key={step.id} className="bg-slate-700/30 border border-slate-600 rounded-lg p-3">
+                <div key={step.id} className="bg-stone-700/30 border border-stone-600 rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-slate-400">步驟 {index + 1}</span>
+                    <span className="text-sm text-stone-600">步驟 {index + 1}</span>
                     <button
                       type="button"
                       onClick={() => removeStep(index)}
@@ -434,13 +440,13 @@ function McpConfigTab({
                     placeholder="步驟名稱"
                     value={step.name}
                     onChange={e => updateStep(index, {...step, name: e.target.value})}
-                    className="w-full px-3 py-2 mb-2 bg-slate-600/50 border border-slate-500 rounded text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    className="w-full px-3 py-2 mb-2 bg-stone-600/50 border border-stone-500 rounded text-white text-sm placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-purple-500"
                   />
                   
                   <select
                     value={step.modelId}
                     onChange={e => updateStep(index, {...step, modelId: e.target.value})}
-                    className="w-full px-3 py-2 mb-2 bg-slate-600/50 border border-slate-500 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    className="w-full px-3 py-2 mb-2 bg-stone-600/50 border border-stone-500 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
                   >
                     {models.map(model => (
                       <option key={model.id} value={model.id}>{model.name}</option>
@@ -452,7 +458,7 @@ function McpConfigTab({
                     value={step.promptTemplate}
                     onChange={e => updateStep(index, {...step, promptTemplate: e.target.value})}
                     rows={3}
-                    className="w-full px-3 py-2 bg-slate-600/50 border border-slate-500 rounded text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-purple-500 resize-none"
+                    className="w-full px-3 py-2 bg-stone-600/50 border border-stone-500 rounded text-white text-sm placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-purple-500 resize-none"
                   />
                 </div>
               ))}
@@ -462,14 +468,14 @@ function McpConfigTab({
           <div className="flex gap-3">
             <button 
               type="submit"
-              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
             >
               儲存
             </button>
             <button 
               type="button" 
               onClick={() => {setEditingMcp(null); setFormData({});}}
-              className="flex-1 bg-slate-600 hover:bg-slate-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              className="flex-1 bg-stone-600 hover:bg-stone-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
             >
               取消
             </button>
@@ -523,8 +529,8 @@ function LorebookTab({
             key={category}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               selectedCategory === category
-                ? 'bg-purple-600 text-white'
-                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                ? 'bg-amber-600 text-white'
+                : 'bg-stone-700 text-stone-300 hover:bg-stone-600'
             }`}
             onClick={() => setSelectedCategory(category)}
           >
@@ -539,7 +545,7 @@ function LorebookTab({
             <h3 className="text-lg font-semibold text-white">{selectedCategory} 條目</h3>
             <button
               onClick={() => {setEditingEntry(null); setFormData({});}}
-              className="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+              className="flex items-center gap-2 px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
             >
               <Plus size={16} />
               新增
@@ -548,16 +554,16 @@ function LorebookTab({
           
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {entries.map(entry => (
-              <div key={entry.id} className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
+              <div key={entry.id} className="bg-stone-700/50 border border-stone-600 rounded-lg p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h4 className="font-medium text-white mb-1">{entry.keyword}</h4>
-                    <p className="text-sm text-slate-400 line-clamp-2">{entry.description}</p>
+                    <p className="text-sm text-stone-600 line-clamp-2">{entry.description}</p>
                   </div>
                   <div className="flex gap-2 ml-3">
                     <button
                       onClick={() => handleEdit(entry)}
-                      className="p-2 text-slate-400 hover:text-white transition-colors"
+                      className="p-2 text-stone-600 hover:text-stone-800 transition-colors"
                     >
                       <Edit size={16} />
                     </button>
@@ -585,7 +591,7 @@ function LorebookTab({
               placeholder="關鍵詞"
               value={formData.keyword || ''}
               onChange={e => setFormData({...formData, keyword: e.target.value})}
-              className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-800 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
               required
             />
             
@@ -594,21 +600,21 @@ function LorebookTab({
               value={formData.description || ''}
               onChange={e => setFormData({...formData, description: e.target.value})}
               rows={6}
-              className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+              className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-800 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
               required
             />
 
             <div className="flex gap-3">
               <button 
                 type="submit"
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
               >
                 儲存
               </button>
               <button 
                 type="button" 
                 onClick={() => {setEditingEntry(null); setFormData({});}}
-                className="flex-1 bg-slate-600 hover:bg-slate-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                className="flex-1 bg-stone-600 hover:bg-stone-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
               >
                 取消
               </button>

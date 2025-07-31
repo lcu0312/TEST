@@ -2,6 +2,17 @@ import { MCPConfig, LorebookCategory } from './types';
 
 export const LOREBOOK_CATEGORIES: LorebookCategory[] = ['角色', '地點', '物品', '傳說'];
 
+export const MORANDI_COLORS = {
+  primary: '#d4c4a8',
+  primaryHover: '#c4b498',
+  background: '#f5f1eb',
+  backgroundDark: '#e8ddd4',
+  text: '#8b7355',
+  textLight: '#a68b5b',
+  border: '#d4c4a8',
+  accent: '#b8a082'
+};
+
 export const DEFAULT_MCP: MCPConfig = {
   id: 'default-mirroverse',
   name: '預設 MirroVerse 故事',
