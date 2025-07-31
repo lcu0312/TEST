@@ -1,13 +1,20 @@
 {
   "name": "mirroverse-engine",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "description": "AI驅動的創意內容生成平台",
+  "author": "KY Lin <lcu0312@gmail.com>",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron": "electron electron/main.cjs",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron electron/main.cjs\"",
+    "build:electron": "npm run build && electron-builder",
+    "build:win": "npm run build && electron-builder --win",
+    "dist": "npm run build && electron-builder --win --publish=never"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
@@ -58,6 +65,8 @@
     "vaul": "^1.1.2",
     "zod": "^4.0.14"
   },
+  "main": "electron/main.cjs",
+  "homepage": "./",
   "devDependencies": {
     "@eslint/js": "^9.15.0",
     "@types/node": "^24.1.0",
@@ -65,6 +74,9 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^9.2.0",
+    "electron": "^37.2.5",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.15.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.14",
@@ -73,6 +85,7 @@
     "tailwindcss": "^3.4.16",
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.15.0",
-    "vite": "^6.0.1"
+    "vite": "^6.0.1",
+    "wait-on": "^8.0.4"
   }
 }
