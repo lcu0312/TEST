@@ -63,6 +63,9 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   attachments?: File[];
+  fileAnalysis?: FileAnalysis[];
+  workflow?: MultiAIWorkflow;
+  selectedOutputModel?: string;
 }
 
 export type ViewMode = 'generator' | 'chat' | 'library';
@@ -76,3 +79,35 @@ export interface LorebookEntry {
 }
 
 export type LorebookCategory = '角色' | '地點' | '物品' | '傳說';
+
+export interface AITask {
+  id: string;
+  type: 'text' | 'image' | 'video' | 'audio' | 'document';
+  modelId: string;
+  input: string | File;
+  output?: string;
+  status: 'pending' | 'processing' | 'completed' | 'error';
+}
+
+export interface MultiAIWorkflow {
+  id: string;
+  name: string;
+  tasks: AITask[];
+  coordinatorModelId: string;
+  finalOutput?: string;
+  status: 'pending' | 'processing' | 'completed' | 'error';
+}
+
+export interface FileAnalysis {
+  fileType: string;
+  contentType: 'text' | 'image' | 'video' | 'audio' | 'document';
+  suggestedModels: string[];
+  extractedContent?: string;
+  confidence: number;
+}
+
+export interface AICollaborationConfig {
+  enableAutoDetection: boolean;
+  preferredModels: Record<string, string>;
+  workflowTemplates: MultiAIWorkflow[];
+}

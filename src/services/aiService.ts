@@ -1,4 +1,4 @@
-import { ModelConfig, MCPConfig, GeneratorOutput, LorebookEntry } from '../types';
+import { ModelConfig, MCPConfig, GeneratorOutput, LorebookEntry, FileAnalysis, MultiAIWorkflow, AITask } from '../types';
 
 export async function runMcpPipeline(
   mcp: MCPConfig,
@@ -169,21 +169,149 @@ async function generateImage(model: ModelConfig, prompt: string): Promise<string
   return canvas.toDataURL();
 }
 
+export async function analyzeFile(file: File, models: ModelConfig[]): Promise<FileAnalysis> {
+  const fileType = file.type;
+  let contentType: 'text' | 'image' | 'video' | 'audio' | 'document';
+  let suggestedModels: string[] = [];
+  let extractedContent: string | undefined;
+  let confidence = 0.8;
+
+  if (fileType.startsWith('image/')) {
+    contentType = 'image';
+    suggestedModels = models.filter(m => m.provider === 'google').map(m => m.id);
+  } else if (fileType.startsWith('video/')) {
+    contentType = 'video';
+    suggestedModels = models.filter(m => m.provider === 'google').map(m => m.id);
+    extractedContent = `視頻檔案: ${file.name}, 大小: ${(file.size / 1024 / 1024).toFixed(2)}MB`;
+  } else if (fileType.startsWith('audio/')) {
+    contentType = 'audio';
+    suggestedModels = models.filter(m => m.provider === 'google').map(m => m.id);
+    extractedContent = `音頻檔案: ${file.name}, 大小: ${(file.size / 1024 / 1024).toFixed(2)}MB`;
+  } else if (fileType.startsWith('text/') || fileType.includes('document') || fileType.includes('pdf')) {
+    contentType = 'document';
+    suggestedModels = models.map(m => m.id);
+    if (fileType.startsWith('text/')) {
+      try {
+        extractedContent = await file.text();
+        confidence = 0.95;
+      } catch (error) {
+        extractedContent = `無法讀取文字內容: ${file.name}`;
+        confidence = 0.5;
+      }
+    } else {
+      extractedContent = `文檔檔案: ${file.name}, 類型: ${fileType}`;
+    }
+  } else {
+    contentType = 'document';
+    suggestedModels = models.map(m => m.id);
+    extractedContent = `未知檔案類型: ${file.name} (${fileType})`;
+    confidence = 0.3;
+  }
+
+  return {
+    fileType,
+    contentType,
+    suggestedModels,
+    extractedContent,
+    confidence
+  };
+}
+
+export async function processMultiAIWorkflow(
+  workflow: MultiAIWorkflow,
+  models: ModelConfig[]
+): Promise<string> {
+  const results: string[] = [];
+  
+  for (const task of workflow.tasks) {
+    const model = models.find(m => m.id === task.modelId);
+    if (!model) {
+      throw new Error(`模型 ${task.modelId} 未找到`);
+    }
+
+    task.status = 'processing';
+    
+    try {
+      let prompt = '';
+      if (typeof task.input === 'string') {
+        prompt = task.input;
+      } else {
+        const fileAnalysis = await analyzeFile(task.input, models);
+        prompt = `處理檔案: ${task.input.name}\n類型: ${fileAnalysis.contentType}\n內容: ${fileAnalysis.extractedContent || '無法提取內容'}`;
+      }
+
+      const result = await callAiModel(model, prompt);
+      task.output = result;
+      task.status = 'completed';
+      results.push(`${task.type} 處理結果 (${model.name}): ${result}`);
+    } catch (error) {
+      task.status = 'error';
+      task.output = `處理失敗: ${error}`;
+      results.push(`${task.type} 處理失敗: ${error}`);
+    }
+  }
+
+  const coordinatorModel = models.find(m => m.id === workflow.coordinatorModelId);
+  if (coordinatorModel && results.length > 1) {
+    const coordinationPrompt = `請整合以下多個 AI 的處理結果，生成最終回應：\n\n${results.join('\n\n')}`;
+    workflow.finalOutput = await callAiModel(coordinatorModel, coordinationPrompt);
+    workflow.status = 'completed';
+    return workflow.finalOutput;
+  }
+
+  workflow.finalOutput = results.join('\n\n');
+  workflow.status = 'completed';
+  return workflow.finalOutput;
+}
+
 export async function sendChatMessage(
   model: ModelConfig,
   message: string,
-  attachments: File[] = []
+  attachments: File[] = [],
+  workflow?: MultiAIWorkflow,
+  models: ModelConfig[] = []
 ): Promise<string> {
+  if (workflow && models.length > 0) {
+    return await processMultiAIWorkflow(workflow, models);
+  }
+
   let fullPrompt = message;
   
   for (const file of attachments) {
     if (file.type.startsWith('text/')) {
       const text = await file.text();
       fullPrompt += `\n\n附件內容 (${file.name}):\n${text}`;
+    } else if (file.type.startsWith('video/')) {
+      fullPrompt += `\n\n視頻檔案: ${file.name} (${file.type})\n大小: ${(file.size / 1024 / 1024).toFixed(2)}MB\n請分析此視頻內容並提供相關回應。`;
+    } else if (file.type.startsWith('audio/')) {
+      fullPrompt += `\n\n音頻檔案: ${file.name} (${file.type})\n大小: ${(file.size / 1024 / 1024).toFixed(2)}MB\n請分析此音頻內容並提供相關回應。`;
+    } else if (file.type.includes('pdf') || file.type.includes('document')) {
+      fullPrompt += `\n\n文檔檔案: ${file.name} (${file.type})\n請分析此文檔內容並提供相關回應。`;
     } else {
       fullPrompt += `\n\n已上傳檔案: ${file.name} (${file.type})`;
     }
   }
   
   return await callAiModel(model, fullPrompt);
+}
+
+export function createDefaultWorkflow(files: File[], models: ModelConfig[]): MultiAIWorkflow {
+  const tasks: AITask[] = files.map((file, index) => ({
+    id: `task-${index}`,
+    type: file.type.startsWith('image/') ? 'image' : 
+          file.type.startsWith('video/') ? 'video' :
+          file.type.startsWith('audio/') ? 'audio' :
+          file.type.startsWith('text/') ? 'text' : 'document',
+    modelId: models[0]?.id || '',
+    input: file,
+    status: 'pending'
+  }));
+
+  return {
+    id: `workflow-${Date.now()}`,
+    name: '自動協作工作流程',
+    tasks,
+    coordinatorModelId: models[0]?.id || '',
+    status: 'pending'
+  };
 }
