@@ -9,10 +9,11 @@
     "electron/**/*",
     "package.json"
   ],
-  "extraResources": [
+  "extraFiles": [
     {
       "from": "dist",
-      "to": "dist"
+      "to": "dist",
+      "filter": ["**/*"]
     }
   ],
   "win": {

@@ -23,7 +23,30 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    // Try multiple possible paths for the dist folder
+    const possiblePaths = [
+      path.join(__dirname, '../dist/index.html'),
+      path.join(process.resourcesPath, 'dist/index.html'),
+      path.join(__dirname, '../../dist/index.html')
+    ];
+    
+    let loaded = false;
+    for (const filePath of possiblePaths) {
+      try {
+        if (require('fs').existsSync(filePath)) {
+          mainWindow.loadFile(filePath);
+          loaded = true;
+          break;
+        }
+      } catch (error) {
+        console.log(`Failed to load from ${filePath}:`, error);
+      }
+    }
+    
+    if (!loaded) {
+      console.error('Could not find index.html in any expected location');
+      mainWindow.loadURL('data:text/html,<h1>Error: Could not load application</h1>');
+    }
   }
 
   mainWindow.once('ready-to-show', () => {
