@@ -2,17 +2,18 @@ import React, { useState } from 'react';
 import { X, Plus, Trash2, Edit } from 'lucide-react';
 import { ModelConfig, MCPConfig, MCPStep, LorebookEntry, ExternalServiceConnector } from '../types';
 import { generateId, LOREBOOK_CATEGORIES } from '../utils';
-import { useUserStorage } from '../hooks/useUserStorage';
+import { useExternalConnectors } from '../hooks/useApiData';
+import apiService from '../services/apiService';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   modelConfigs: ModelConfig[];
-  setModelConfigs: (configs: ModelConfig[]) => void;
+  setModelConfigs: (config: ModelConfig) => Promise<void>;
   mcps: MCPConfig[];
-  setMcps: (mcps: MCPConfig[]) => void;
+  setMcps: (mcp: MCPConfig) => Promise<void>;
   lorebook: LorebookEntry[];
-  setLorebook: (entries: LorebookEntry[]) => void;
+  setLorebook: (entry: LorebookEntry) => Promise<void>;
   userId?: string;
 }
 
@@ -27,6 +28,7 @@ export function SettingsModal({
   setLorebook,
   userId
 }: SettingsModalProps) {
+  void userId;
   const [activeTab, setActiveTab] = useState<'models' | 'mcp' | 'connectors' | 'lorebook'>('models');
   const [editingModel, setEditingModel] = useState<ModelConfig | null>(null);
   const [editingMcp, setEditingMcp] = useState<MCPConfig | null>(null);
@@ -34,64 +36,79 @@ export function SettingsModal({
   const [editingLorebook, setEditingLorebook] = useState<LorebookEntry | null>(null);
   const [selectedCategory, setSelectedCategory] = useState(LOREBOOK_CATEGORIES[0]);
   
-  const [externalConnectors, setExternalConnectors] = useUserStorage<ExternalServiceConnector[]>(
-    userId || null,
-    'externalConnectors',
-    []
-  );
+  const { data: externalConnectors, saveExternalConnector, deleteExternalConnector } = useExternalConnectors([]);
 
   if (!isOpen) return null;
 
-  const handleSaveModel = (model: ModelConfig) => {
-    if (editingModel?.id) {
-      setModelConfigs(modelConfigs.map(m => m.id === model.id ? model : m));
-    } else {
-      setModelConfigs([...modelConfigs, { ...model, id: generateId() }]);
+  const handleSaveModel = async (model: ModelConfig) => {
+    try {
+      await setModelConfigs(model);
+      setEditingModel(null);
+    } catch (error) {
+      console.error('Failed to save model config:', error);
     }
-    setEditingModel(null);
   };
 
-  const handleDeleteModel = (id: string) => {
-    setModelConfigs(modelConfigs.filter(m => m.id !== id));
-  };
-
-  const handleSaveMcp = (mcp: MCPConfig) => {
-    if (editingMcp?.id) {
-      setMcps(mcps.map(m => m.id === mcp.id ? mcp : m));
-    } else {
-      setMcps([...mcps, { ...mcp, id: generateId() }]);
+  const handleDeleteModel = async (id: string) => {
+    try {
+      await apiService.deleteModelConfig(id);
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to delete model config:', error);
     }
-    setEditingMcp(null);
   };
 
-  const handleDeleteMcp = (id: string) => {
-    setMcps(mcps.filter(m => m.id !== id));
-  };
-
-  const handleSaveLorebook = (entry: LorebookEntry) => {
-    if (editingLorebook?.id) {
-      setLorebook(lorebook.map(e => e.id === entry.id ? entry : e));
-    } else {
-      setLorebook([...lorebook, { ...entry, id: generateId() }]);
+  const handleSaveMcp = async (mcp: MCPConfig) => {
+    try {
+      await setMcps(mcp);
+      setEditingMcp(null);
+    } catch (error) {
+      console.error('Failed to save MCP config:', error);
     }
-    setEditingLorebook(null);
   };
 
-  const handleDeleteLorebook = (id: string) => {
-    setLorebook(lorebook.filter(e => e.id !== id));
-  };
-
-  const handleSaveConnector = (connector: ExternalServiceConnector) => {
-    if (editingConnector?.id) {
-      setExternalConnectors(externalConnectors.map(c => c.id === connector.id ? connector : c));
-    } else {
-      setExternalConnectors([...externalConnectors, { ...connector, id: generateId() }]);
+  const handleDeleteMcp = async (id: string) => {
+    try {
+      await apiService.deleteMCPConfig(id);
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to delete MCP config:', error);
     }
-    setEditingConnector(null);
   };
 
-  const handleDeleteConnector = (id: string) => {
-    setExternalConnectors(externalConnectors.filter(c => c.id !== id));
+  const handleSaveLorebook = async (entry: LorebookEntry) => {
+    try {
+      await setLorebook(entry);
+      setEditingLorebook(null);
+    } catch (error) {
+      console.error('Failed to save lorebook entry:', error);
+    }
+  };
+
+  const handleDeleteLorebook = async (id: string) => {
+    try {
+      await apiService.deleteLorebookEntry(id);
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to delete lorebook entry:', error);
+    }
+  };
+
+  const handleSaveConnector = async (connector: ExternalServiceConnector) => {
+    try {
+      await saveExternalConnector(connector);
+      setEditingConnector(null);
+    } catch (error) {
+      console.error('Failed to save external connector:', error);
+    }
+  };
+
+  const handleDeleteConnector = async (id: string) => {
+    try {
+      await deleteExternalConnector(id);
+    } catch (error) {
+      console.error('Failed to delete external connector:', error);
+    }
   };
 
   const filteredLorebook = lorebook.filter(entry => entry.category === selectedCategory);

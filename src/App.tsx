@@ -1,77 +1,113 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings, Zap, MessageCircle, Library, LogOut } from 'lucide-react';
 import { LoginView } from './components/LoginView';
 import { SettingsModal } from './components/SettingsModal';
 import { GeneratorView } from './components/GeneratorView';
 import { ChatView } from './components/ChatView';
 import { LibraryView } from './components/LibraryView';
-import { useUserStorage } from './hooks/useUserStorage';
-import { ModelConfig, MCPConfig, SavedCreation, ViewMode, User, LorebookEntry } from './types';
+import { useModelConfigs, useMCPConfigs, useSavedCreations, useLorebookEntries } from './hooks/useApiData';
+import { SavedCreation, ViewMode, User } from './types';
 import { DEFAULT_MCPS } from './utils';
+import apiService from './services/apiService';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState<ViewMode>('generator');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  const [modelConfigs, setModelConfigs] = useUserStorage<ModelConfig[]>(
-    user?.username || null,
-    'modelConfigs',
-    [
-      {
-        id: 'default-google',
-        name: '預設 Google AI',
-        provider: 'google',
-        apiKey: '',
-        model: 'gemini-pro',
-        temperature: 0.7,
-        maxTokens: 2048
+  const { data: modelConfigs, saveModelConfig } = useModelConfigs([
+    {
+      id: 'default-google',
+      name: '預設 Google AI',
+      provider: 'google',
+      apiKey: '',
+      model: 'gemini-pro',
+      temperature: 0.7,
+      maxTokens: 2048
+    }
+  ]);
+
+  const { data: mcps, saveMCPConfig } = useMCPConfigs(DEFAULT_MCPS);
+
+  const { data: savedCreations, saveCreation, updateCreation, deleteCreation } = useSavedCreations([]);
+
+  const { data: lorebook, saveLorebookEntry } = useLorebookEntries([]);
+
+  useEffect(() => {
+    const checkExistingAuth = async () => {
+      try {
+        const sessionToken = localStorage.getItem('session_token');
+        if (sessionToken) {
+          const currentUser = await apiService.getCurrentUser();
+          setUser(currentUser);
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        localStorage.removeItem('session_token');
+      } finally {
+        setIsCheckingAuth(false);
       }
-    ]
-  );
+    };
 
-  const [mcps, setMcps] = useUserStorage<MCPConfig[]>(
-    user?.username || null,
-    'mcps',
-    DEFAULT_MCPS
-  );
+    checkExistingAuth();
+  }, []);
 
-  const [savedCreations, setSavedCreations] = useUserStorage<SavedCreation[]>(
-    user?.username || null,
-    'savedCreations',
-    []
-  );
-
-  const [lorebook, setLorebook] = useUserStorage<LorebookEntry[]>(
-    user?.username || null,
-    'lorebook',
-    []
-  );
-
-  const handleLogin = (username: string) => {
-    setUser({ username });
+  const handleLogin = async (username: string) => {
+    try {
+      const result = await apiService.login(username);
+      setUser(result.user);
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    setCurrentView('generator');
+  const handleLogout = async () => {
+    try {
+      await apiService.logout();
+      setUser(null);
+      setCurrentView('generator');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
-  const handleSaveCreation = (creation: SavedCreation) => {
-    setSavedCreations(prev => [creation, ...prev]);
+  const handleSaveCreation = async (creation: SavedCreation) => {
+    try {
+      await saveCreation(creation);
+    } catch (error) {
+      console.error('Failed to save creation:', error);
+    }
   };
 
-  const handleUpdateCreation = (updatedCreation: SavedCreation) => {
-    setSavedCreations(prev => 
-      prev.map(creation => 
-        creation.id === updatedCreation.id ? updatedCreation : creation
-      )
+  const handleUpdateCreation = async (updatedCreation: SavedCreation) => {
+    try {
+      await updateCreation(updatedCreation.id, updatedCreation);
+    } catch (error) {
+      console.error('Failed to update creation:', error);
+    }
+  };
+
+  const handleDeleteCreation = async (id: string) => {
+    try {
+      await deleteCreation(id);
+    } catch (error) {
+      console.error('Failed to delete creation:', error);
+    }
+  };
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-stone-100 via-amber-50 to-stone-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-amber-600 to-amber-700 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <span className="text-white font-bold text-sm">幻</span>
+          </div>
+          <p className="text-stone-600">正在檢查登入狀態...</p>
+        </div>
+      </div>
     );
-  };
-
-  const handleDeleteCreation = (id: string) => {
-    setSavedCreations(prev => prev.filter(creation => creation.id !== id));
-  };
+  }
 
   if (!user) {
     return <LoginView onLogin={handleLogin} />;
@@ -174,11 +210,11 @@ function App() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         modelConfigs={modelConfigs}
-        setModelConfigs={setModelConfigs}
+        setModelConfigs={saveModelConfig}
         mcps={mcps}
-        setMcps={setMcps}
+        setMcps={saveMCPConfig}
         lorebook={lorebook}
-        setLorebook={setLorebook}
+        setLorebook={saveLorebookEntry}
         userId={user?.username}
       />
 

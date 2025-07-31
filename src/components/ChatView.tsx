@@ -3,7 +3,7 @@ import { Send, Paperclip, Mic, MicOff, Volume2, Share2, Settings, Zap, Users, Do
 import { ModelConfig, ChatMessage, FileAnalysis, MultiAIWorkflow, Conversation } from '../types';
 import { sendChatMessage, analyzeFile, createDefaultWorkflow } from '../services/aiService';
 import { generateId } from '../utils';
-import { useUserStorage } from '../hooks/useUserStorage';
+import { useConversations } from '../hooks/useApiData';
 
 interface ChatViewProps {
   models: ModelConfig[];
@@ -11,6 +11,7 @@ interface ChatViewProps {
 }
 
 export function ChatView({ models, userId }: ChatViewProps) {
+  void userId;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -24,11 +25,7 @@ export function ChatView({ models, userId }: ChatViewProps) {
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   
-  const [conversations, setConversations] = useUserStorage<Conversation[]>(
-    userId || null,
-    'conversations',
-    []
-  );
+  const { data: conversations, saveConversation, updateConversation, deleteConversation: deleteConversationApi } = useConversations([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   
   const currentConversation = conversations.find(c => c.id === currentConversationId);
@@ -226,35 +223,51 @@ export function ChatView({ models, userId }: ChatViewProps) {
     URL.revokeObjectURL(url);
   };
 
-  const createNewConversation = () => {
-    const newConversation: Conversation = {
-      id: generateId(),
-      title: '新對話',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      messages: []
-    };
-    
-    setConversations(prev => [newConversation, ...prev]);
-    setCurrentConversationId(newConversation.id);
-    setMessages([]);
-  };
-
-  const deleteConversation = (conversationId: string) => {
-    setConversations(prev => prev.filter(c => c.id !== conversationId));
-    if (currentConversationId === conversationId) {
-      setCurrentConversationId(null);
+  const createNewConversation = async () => {
+    try {
+      const newConversation: Conversation = {
+        id: generateId(),
+        title: `新對話 ${conversations.length + 1}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        messages: []
+      };
+      
+      await saveConversation(newConversation);
+      setCurrentConversationId(newConversation.id);
       setMessages([]);
+    } catch (error) {
+      console.error('Failed to create conversation:', error);
     }
   };
 
-  const updateConversationMessages = (newMessages: ChatMessage[]) => {
+  const deleteConversation = async (conversationId: string) => {
+    try {
+      await deleteConversationApi(conversationId);
+      if (currentConversationId === conversationId) {
+        setCurrentConversationId(null);
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Failed to delete conversation:', error);
+    }
+  };
+
+  const updateConversationMessages = async (newMessages: ChatMessage[]) => {
     if (currentConversationId) {
-      setConversations(prev => prev.map(c => 
-        c.id === currentConversationId 
-          ? { ...c, messages: newMessages, updatedAt: new Date().toISOString() }
-          : c
-      ));
+      try {
+        const conversation = conversations.find(c => c.id === currentConversationId);
+        if (conversation) {
+          const updatedConversation = {
+            ...conversation,
+            messages: newMessages,
+            updatedAt: new Date().toISOString()
+          };
+          await updateConversation(currentConversationId, updatedConversation);
+        }
+      } catch (error) {
+        console.error('Failed to update conversation:', error);
+      }
     }
     setMessages(newMessages);
   };
