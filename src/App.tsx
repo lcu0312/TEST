@@ -156,7 +156,7 @@ function App() {
 
         {currentView === 'chat' && (
           <div className="h-[calc(100vh-12rem)]">
-            <ChatView models={modelConfigs} />
+            <ChatView models={modelConfigs} userId={user?.username} />
           </div>
         )}
 
@@ -179,6 +179,7 @@ function App() {
         setMcps={setMcps}
         lorebook={lorebook}
         setLorebook={setLorebook}
+        userId={user?.username}
       />
 
       {/* Footer */}

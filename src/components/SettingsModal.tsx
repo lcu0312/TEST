@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2, Edit } from 'lucide-react';
-import { ModelConfig, MCPConfig, MCPStep, LorebookEntry } from '../types';
+import { ModelConfig, MCPConfig, MCPStep, LorebookEntry, ExternalServiceConnector } from '../types';
 import { generateId, LOREBOOK_CATEGORIES } from '../utils';
+import { useUserStorage } from '../hooks/useUserStorage';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface SettingsModalProps {
   setMcps: (mcps: MCPConfig[]) => void;
   lorebook: LorebookEntry[];
   setLorebook: (entries: LorebookEntry[]) => void;
+  userId?: string;
 }
 
 export function SettingsModal({
@@ -22,13 +24,21 @@ export function SettingsModal({
   mcps,
   setMcps,
   lorebook,
-  setLorebook
+  setLorebook,
+  userId
 }: SettingsModalProps) {
-  const [activeTab, setActiveTab] = useState<'models' | 'mcp' | 'lorebook'>('models');
+  const [activeTab, setActiveTab] = useState<'models' | 'mcp' | 'connectors' | 'lorebook'>('models');
   const [editingModel, setEditingModel] = useState<ModelConfig | null>(null);
   const [editingMcp, setEditingMcp] = useState<MCPConfig | null>(null);
+  const [editingConnector, setEditingConnector] = useState<ExternalServiceConnector | null>(null);
   const [editingLorebook, setEditingLorebook] = useState<LorebookEntry | null>(null);
   const [selectedCategory, setSelectedCategory] = useState(LOREBOOK_CATEGORIES[0]);
+  
+  const [externalConnectors, setExternalConnectors] = useUserStorage<ExternalServiceConnector[]>(
+    userId || null,
+    'externalConnectors',
+    []
+  );
 
   if (!isOpen) return null;
 
@@ -71,6 +81,19 @@ export function SettingsModal({
     setLorebook(lorebook.filter(e => e.id !== id));
   };
 
+  const handleSaveConnector = (connector: ExternalServiceConnector) => {
+    if (editingConnector?.id) {
+      setExternalConnectors(externalConnectors.map(c => c.id === connector.id ? connector : c));
+    } else {
+      setExternalConnectors([...externalConnectors, { ...connector, id: generateId() }]);
+    }
+    setEditingConnector(null);
+  };
+
+  const handleDeleteConnector = (id: string) => {
+    setExternalConnectors(externalConnectors.filter(c => c.id !== id));
+  };
+
   const filteredLorebook = lorebook.filter(entry => entry.category === selectedCategory);
 
   return (
@@ -90,6 +113,7 @@ export function SettingsModal({
           {[
             { key: 'models', label: 'AI 模型' },
             { key: 'mcp', label: 'MCP 設定' },
+            { key: 'connectors', label: '外部連接器' },
             { key: 'lorebook', label: '世界觀資料庫' }
           ].map(tab => (
             <button
@@ -125,6 +149,16 @@ export function SettingsModal({
               setEditingMcp={setEditingMcp}
               onSave={handleSaveMcp}
               onDelete={handleDeleteMcp}
+            />
+          )}
+
+          {activeTab === 'connectors' && (
+            <ExternalConnectorTab
+              connectors={externalConnectors}
+              editingConnector={editingConnector}
+              setEditingConnector={setEditingConnector}
+              onSave={handleSaveConnector}
+              onDelete={handleDeleteConnector}
             />
           )}
 
@@ -485,6 +519,155 @@ function McpConfigTab({
     </div>
   );
 }
+function ExternalConnectorTab({
+  connectors,
+  editingConnector,
+  setEditingConnector,
+  onSave,
+  onDelete
+}: {
+  connectors: ExternalServiceConnector[];
+  editingConnector: ExternalServiceConnector | null;
+  setEditingConnector: (connector: ExternalServiceConnector | null) => void;
+  onSave: (connector: ExternalServiceConnector) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [formData, setFormData] = useState<Partial<ExternalServiceConnector>>({});
+
+  const handleEdit = (connector: ExternalServiceConnector) => {
+    setEditingConnector(connector);
+    setFormData(connector);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.name && formData.type && formData.url) {
+      onSave(formData as ExternalServiceConnector);
+      setFormData({});
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-stone-800">外部服務連接器</h3>
+          <button
+            onClick={() => {setEditingConnector(null); setFormData({});}}
+            className="flex items-center gap-2 px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
+          >
+            <Plus size={16} />
+            新增連接器
+          </button>
+        </div>
+        
+        <div className="space-y-3">
+          {connectors.map(connector => (
+            <div key={connector.id} className="bg-stone-100 border border-stone-300 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-stone-800">{connector.name}</h4>
+                  <p className="text-sm text-stone-600">{connector.type} - {connector.url}</p>
+                  <span className={`text-xs px-2 py-1 rounded ${connector.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {connector.enabled ? '已啟用' : '已停用'}
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEdit(connector)}
+                    className="p-2 text-stone-600 hover:text-stone-800 transition-colors"
+                  >
+                    <Edit size={16} />
+                  </button>
+                  <button
+                    onClick={() => onDelete(connector.id)}
+                    className="p-2 text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold text-stone-800 mb-4">
+          {editingConnector ? '編輯連接器' : '新增連接器'}
+        </h3>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="text"
+            placeholder="連接器名稱"
+            value={formData.name || ''}
+            onChange={e => setFormData({...formData, name: e.target.value})}
+            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-800 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            required
+          />
+          
+          <select
+            value={formData.type || ''}
+            onChange={e => setFormData({...formData, type: e.target.value as ExternalServiceConnector['type']})}
+            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            required
+          >
+            <option value="">選擇服務類型</option>
+            <option value="google-colab">Google Colab</option>
+            <option value="webhook">Webhook</option>
+            <option value="api">API</option>
+          </select>
+
+          <input
+            type="url"
+            placeholder="服務 URL"
+            value={formData.url || ''}
+            onChange={e => setFormData({...formData, url: e.target.value})}
+            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-800 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            required
+          />
+
+          <input
+            type="text"
+            placeholder="API Key (可選)"
+            value={formData.apiKey || ''}
+            onChange={e => setFormData({...formData, apiKey: e.target.value})}
+            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-800 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+          />
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={formData.enabled || false}
+              onChange={e => setFormData({...formData, enabled: e.target.checked})}
+              className="rounded border-stone-400 bg-white text-amber-600 focus:ring-amber-500"
+            />
+            <span className="text-stone-700">啟用連接器</span>
+          </label>
+
+          <div className="flex gap-3">
+            <button 
+              type="submit"
+              className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+            >
+              儲存
+            </button>
+            <button 
+              type="button" 
+              onClick={() => {setEditingConnector(null); setFormData({});}}
+              className="flex-1 bg-stone-600 hover:bg-stone-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+            >
+              取消
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
 
 function LorebookTab({
   entries,

@@ -18,12 +18,14 @@ export interface MCPStep {
   name: string;
   modelId: string;
   promptTemplate: string;
+  externalConnector?: string;
 }
 
 export interface MCPConfig {
   id: string;
   name: string;
   steps: MCPStep[];
+  externalConnectors?: ExternalServiceConnector[];
 }
 
 export interface Choice {
@@ -112,4 +114,22 @@ export interface AICollaborationConfig {
   enableAutoDetection: boolean;
   preferredModels: Record<string, string>;
   workflowTemplates: MultiAIWorkflow[];
+}
+
+export interface Conversation {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: ChatMessage[];
+}
+
+export interface ExternalServiceConnector {
+  id: string;
+  name: string;
+  type: 'google-colab' | 'webhook' | 'api';
+  url: string;
+  apiKey?: string;
+  headers?: Record<string, string>;
+  enabled: boolean;
 }

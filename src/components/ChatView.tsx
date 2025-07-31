@@ -1,14 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Mic, MicOff, Volume2, Share2, Settings, Zap, Users, Download, ChevronLeft, ChevronRight } from 'lucide-react';
-import { ModelConfig, ChatMessage, FileAnalysis, MultiAIWorkflow } from '../types';
+import { Send, Paperclip, Mic, MicOff, Volume2, Share2, Settings, Zap, Users, Download, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { ModelConfig, ChatMessage, FileAnalysis, MultiAIWorkflow, Conversation } from '../types';
 import { sendChatMessage, analyzeFile, createDefaultWorkflow } from '../services/aiService';
 import { generateId } from '../utils';
+import { useUserStorage } from '../hooks/useUserStorage';
 
 interface ChatViewProps {
   models: ModelConfig[];
+  userId?: string;
 }
 
-export function ChatView({ models }: ChatViewProps) {
+export function ChatView({ models, userId }: ChatViewProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -21,6 +23,16 @@ export function ChatView({ models }: ChatViewProps) {
   const [currentWorkflow, setCurrentWorkflow] = useState<MultiAIWorkflow | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  
+  const [conversations, setConversations] = useUserStorage<Conversation[]>(
+    userId || null,
+    'conversations',
+    []
+  );
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  
+  const currentConversation = conversations.find(c => c.id === currentConversationId);
+  const currentMessages = currentConversation?.messages || messages;
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -113,7 +125,7 @@ export function ChatView({ models }: ChatViewProps) {
       selectedOutputModel: enableMultiAI ? selectedOutputModel : undefined
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    updateConversationMessages([...currentMessages, userMessage]);
     setInputMessage('');
     setAttachments([]);
     setFileAnalyses([]);
@@ -136,7 +148,7 @@ export function ChatView({ models }: ChatViewProps) {
         timestamp: new Date().toISOString()
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      updateConversationMessages([...currentMessages, userMessage, assistantMessage]);
     } catch (error) {
       console.error('Failed to send message:', error);
       const errorMessage: ChatMessage = {
@@ -145,7 +157,7 @@ export function ChatView({ models }: ChatViewProps) {
         content: '抱歉，發送訊息時發生錯誤。請檢查網路連接和 AI 模型設定。',
         timestamp: new Date().toISOString()
       };
-      setMessages(prev => [...prev, errorMessage]);
+      updateConversationMessages([...currentMessages, userMessage, errorMessage]);
     } finally {
       setIsSending(false);
     }
@@ -192,8 +204,8 @@ export function ChatView({ models }: ChatViewProps) {
   const exportChatHistory = () => {
     const chatData = {
       exportDate: new Date().toISOString(),
-      totalMessages: messages.length,
-      messages: messages.map(msg => ({
+      totalMessages: currentMessages.length,
+      messages: currentMessages.map(msg => ({
         ...msg,
         attachments: msg.attachments?.map(file => ({
           name: file.name,
@@ -214,6 +226,47 @@ export function ChatView({ models }: ChatViewProps) {
     URL.revokeObjectURL(url);
   };
 
+  const createNewConversation = () => {
+    const newConversation: Conversation = {
+      id: generateId(),
+      title: '新對話',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      messages: []
+    };
+    
+    setConversations(prev => [newConversation, ...prev]);
+    setCurrentConversationId(newConversation.id);
+    setMessages([]);
+  };
+
+  const deleteConversation = (conversationId: string) => {
+    setConversations(prev => prev.filter(c => c.id !== conversationId));
+    if (currentConversationId === conversationId) {
+      setCurrentConversationId(null);
+      setMessages([]);
+    }
+  };
+
+  const updateConversationMessages = (newMessages: ChatMessage[]) => {
+    if (currentConversationId) {
+      setConversations(prev => prev.map(c => 
+        c.id === currentConversationId 
+          ? { ...c, messages: newMessages, updatedAt: new Date().toISOString() }
+          : c
+      ));
+    }
+    setMessages(newMessages);
+  };
+
+  const selectConversation = (conversationId: string) => {
+    const conversation = conversations.find(c => c.id === conversationId);
+    if (conversation) {
+      setCurrentConversationId(conversationId);
+      setMessages(conversation.messages);
+    }
+  };
+
   return (
     <div className="flex h-full bg-gradient-to-br from-stone-100 via-amber-50 to-stone-100">
       {/* Collapsible Sidebar */}
@@ -228,10 +281,50 @@ export function ChatView({ models }: ChatViewProps) {
           </button>
         </div>
         {!isCollapsed && (
-          <div className="flex-1 p-3">
+          <div className="flex-1 flex flex-col p-3">
+            <button
+              onClick={createNewConversation}
+              className="w-full px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 mb-3"
+            >
+              <Plus size={14} />
+              新增對話
+            </button>
+            
+            <div className="flex-1 overflow-y-auto space-y-2 mb-3">
+              {conversations.map(conversation => (
+                <div
+                  key={conversation.id}
+                  className={`p-2 rounded-lg cursor-pointer transition-colors group ${
+                    currentConversationId === conversation.id
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                  }`}
+                  onClick={() => selectConversation(conversation.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium truncate">
+                      {conversation.title}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteConversation(conversation.id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:text-red-600 transition-all"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                  <div className="text-xs opacity-75 mt-1">
+                    {conversation.messages.length} 則訊息
+                  </div>
+                </div>
+              ))}
+            </div>
+            
             <button
               onClick={exportChatHistory}
-              className="w-full px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              className="w-full px-3 py-2 bg-stone-600 hover:bg-stone-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
             >
               <Download size={14} />
               匯出對話記錄
@@ -319,7 +412,7 @@ export function ChatView({ models }: ChatViewProps) {
             </div>
           )}
 
-          {messages.map(message => (
+          {currentMessages.map(message => (
             <ChatMessageBubble
               key={message.id}
               message={message}

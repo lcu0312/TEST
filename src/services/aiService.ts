@@ -46,7 +46,8 @@ export async function runMcpPipeline(
       return value || match;
     });
 
-    const result = await callAiModel(model, prompt);
+    const externalConnector = mcp.externalConnectors?.find(c => c.id === step.externalConnector);
+    const result = await callAiModelOrService(model, prompt, externalConnector);
     stepResults[step.id] = { result };
   }
 
@@ -102,6 +103,44 @@ function injectLorebookContext(prompt: string, lorebook: LorebookEntry[]): strin
   );
 
   return `Context from your Lorebook:\n${contextLines.join('\n')}`;
+}
+
+async function callExternalService(connector: any, prompt: string): Promise<string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...connector.headers
+  };
+  
+  if (connector.apiKey) {
+    headers['Authorization'] = `Bearer ${connector.apiKey}`;
+  }
+
+  const response = await fetch(connector.url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      prompt,
+      type: connector.type
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`External service error: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.response || data.result || 'No response from external service';
+}
+
+async function callAiModelOrService(
+  model: ModelConfig, 
+  prompt: string, 
+  externalConnector?: any
+): Promise<string> {
+  if (externalConnector && externalConnector.enabled) {
+    return await callExternalService(externalConnector, prompt);
+  }
+  return await callAiModel(model, prompt);
 }
 
 async function callAiModel(model: ModelConfig, prompt: string): Promise<string> {
