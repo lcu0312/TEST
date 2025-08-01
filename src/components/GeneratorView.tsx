@@ -248,30 +248,52 @@ export function GeneratorView({ mcps, onSaveCreation }: GeneratorViewProps) {
             </div>
           </div>
 
-          <button
-            type="button"
+          <div
             onMouseDown={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              console.log('GeneratorView: Button mousedown, calling handleGenerate');
-              if (!isGenerating && prompt.trim()) {
+              console.log('GeneratorView: Div mousedown, calling handleGenerate');
+              if (!isGenerating && prompt.trim() && selectedMcpId) {
                 handleGenerate();
               }
             }}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              console.log('GeneratorView: Button clicked, calling handleGenerate');
-              if (!isGenerating && prompt.trim()) {
+              console.log('GeneratorView: Div clicked, calling handleGenerate');
+              if (!isGenerating && prompt.trim() && selectedMcpId) {
                 handleGenerate();
               }
             }}
-            disabled={isGenerating || !prompt.trim()}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 disabled:from-stone-400 disabled:to-stone-500 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed"
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('GeneratorView: Div touchstart, calling handleGenerate');
+              if (!isGenerating && prompt.trim() && selectedMcpId) {
+                handleGenerate();
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('GeneratorView: Div keydown, calling handleGenerate');
+                if (!isGenerating && prompt.trim() && selectedMcpId) {
+                  handleGenerate();
+                }
+              }
+            }}
+            className={`w-full flex items-center justify-center gap-2 font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform cursor-pointer ${
+              isGenerating || !prompt.trim() || !selectedMcpId
+                ? 'bg-stone-400 text-white cursor-not-allowed'
+                : 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white hover:scale-105'
+            }`}
           >
             <Zap size={20} />
             {isGenerating ? currentStep : '啟動引擎'}
-          </button>
+          </div>
         </div>
       </div>
 
