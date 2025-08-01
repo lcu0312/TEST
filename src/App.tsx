@@ -76,6 +76,7 @@ function App() {
     checkExistingAuth();
   }, []);
 
+
   const handleLogin = async (username: string) => {
     console.log('App: handleLogin called with username:', username);
     try {
@@ -175,28 +176,15 @@ function App() {
               ].map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log(`Navigation clicked: ${key}`);
+                  onClick={() => {
+                    console.log(`Navigation click: ${key}`);
                     setCurrentView(key as ViewMode);
                   }}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    console.log(`Navigation mousedown: ${key}`);
-                    setCurrentView(key as ViewMode);
-                  }}
-                  onTouchStart={(e) => {
-                    e.preventDefault();
-                    console.log(`Navigation touchstart: ${key}`);
-                    setCurrentView(key as ViewMode);
-                  }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 cursor-pointer ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                     currentView === key
                       ? 'bg-amber-600 text-white shadow-lg'
                       : 'text-stone-600 hover:text-stone-800 hover:bg-stone-200/50'
                   }`}
-                  style={{ pointerEvents: 'auto', userSelect: 'none' }}
                 >
                   <Icon size={18} />
                   <span className="hidden sm:inline">{label}</span>
@@ -232,7 +220,7 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main key={currentView} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {currentView === 'generator' && (
           <GeneratorView
             mcps={mcps}
