@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
 import { Upload, Zap, Save, Copy } from 'lucide-react';
-import { ModelConfig, MCPConfig, GeneratorOutput, SavedCreation, LorebookEntry } from '../types';
-import { runMcpPipeline, analyzeFile } from '../services/aiService';
+import { MCPConfig, GeneratorOutput, SavedCreation } from '../types';
 import { generateTitleFromNarrative, generateId } from '../utils';
 import { InteractivePlayer } from './InteractivePlayer';
 
 interface GeneratorViewProps {
-  models: ModelConfig[];
   mcps: MCPConfig[];
-  lorebook: LorebookEntry[];
   onSaveCreation: (creation: SavedCreation) => void;
 }
 
-export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: GeneratorViewProps) {
+export function GeneratorView({ mcps, onSaveCreation }: GeneratorViewProps) {
   const [prompt, setPrompt] = useState('');
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [selectedMcpId, setSelectedMcpId] = useState(mcps[0]?.id || '');
@@ -38,21 +35,33 @@ export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: Genera
     setCurrentStep('準備生成...');
 
     try {
-      let fileDescription = '';
+      const files = [];
       if (attachedFile) {
-        const fileAnalysis = await analyzeFile(attachedFile, models);
-        const fileType = attachedFile.type.startsWith('image/') ? '圖片' : 
-                        attachedFile.type.startsWith('video/') ? '影片' : '文件';
-        fileDescription = `上傳的${fileType}: ${attachedFile.name}\n類型: ${fileAnalysis.contentType}\n內容: ${fileAnalysis.extractedContent || '無法提取內容'}\n建議模型: ${fileAnalysis.suggestedModels.join(', ')}`;
+        files.push({
+          name: attachedFile.name,
+          type: attachedFile.type,
+          size: attachedFile.size
+        });
       }
 
-      const result = await runMcpPipeline(
-        selectedMcp,
-        models,
-        { prompt, fileDescription },
-        lorebook
-      );
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('session_token')}`
+        },
+        body: JSON.stringify({
+          prompt,
+          mcpConfigId: selectedMcpId,
+          files
+        })
+      });
 
+      if (!response.ok) {
+        throw new Error(`Generation failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
       setOutput(result);
       setActiveTab('visual');
     } catch (error) {
@@ -116,6 +125,7 @@ export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: Genera
                   onChange={handleFileUpload}
                   id="file-upload"
                   className="hidden"
+                  style={{ display: 'none' }}
                 />
                 <label
                   htmlFor="file-upload"
@@ -144,6 +154,7 @@ export function GeneratorView({ models, mcps, lorebook, onSaveCreation }: Genera
           </div>
 
           <button
+            type="button"
             onClick={handleGenerate}
             disabled={isGenerating || !prompt.trim()}
             className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 disabled:from-stone-400 disabled:to-stone-500 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed"

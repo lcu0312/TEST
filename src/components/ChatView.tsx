@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, Mic, MicOff, Volume2, Share2, Settings, Zap, Users, Download, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { ModelConfig, ChatMessage, FileAnalysis, MultiAIWorkflow, Conversation } from '../types';
-import { sendChatMessage, analyzeFile, createDefaultWorkflow } from '../services/aiService';
+import { analyzeFile, createDefaultWorkflow } from '../services/aiService';
 import { generateId } from '../utils';
 import { useConversations } from '../hooks/useApiData';
 
@@ -130,22 +130,36 @@ export function ChatView({ models, userId }: ChatViewProps) {
     setIsSending(true);
 
     try {
-      const response = await sendChatMessage(
-        enableMultiAI && selectedOutputModel ? models.find(m => m.id === selectedOutputModel) || selectedModel : selectedModel, 
-        inputMessage, 
-        attachments,
-        currentWorkflow || undefined,
-        enableMultiAI ? models : []
-      );
-      
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('session_token')}`
+        },
+        body: JSON.stringify({
+          message: inputMessage,
+          conversationId: currentConversationId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Chat failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
       const assistantMessage: ChatMessage = {
-        id: generateId(),
+        id: result.message_id || generateId(),
         role: 'assistant',
-        content: response,
+        content: result.response,
         timestamp: new Date().toISOString()
       };
 
       updateConversationMessages([...currentMessages, userMessage, assistantMessage]);
+      
+      if (result.conversation_id && !currentConversationId) {
+        setCurrentConversationId(result.conversation_id);
+      }
     } catch (error) {
       console.error('Failed to send message:', error);
       const errorMessage: ChatMessage = {
