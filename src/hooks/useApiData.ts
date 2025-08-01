@@ -6,15 +6,18 @@ type EntityType = 'model-configs' | 'mcp-configs' | 'conversations' | 'external-
 
 export function useApiData<T>(
   entityType: EntityType,
-  defaultValue: T
-): [T, (value: T | ((prev: T) => T)) => Promise<void>, boolean, string | null] {
+  defaultValue: T,
+  skipInitialLoad: boolean = false
+): [T, (value: T | ((prev: T) => T)) => Promise<void>, boolean, string | null, () => Promise<void>] {
   const [data, setData] = useState<T>(defaultValue);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!skipInitialLoad);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadData();
-  }, [entityType]);
+    if (!skipInitialLoad) {
+      loadData();
+    }
+  }, [entityType, skipInitialLoad]);
 
   const loadData = async () => {
     try {
@@ -67,11 +70,11 @@ export function useApiData<T>(
     }
   };
 
-  return [data, updateData, loading, error];
+  return [data, updateData, loading, error, loadData];
 }
 
-export function useModelConfigs(defaultValue: ModelConfig[] = []) {
-  const [data, updateData, loading, error] = useApiData<ModelConfig[]>('model-configs', defaultValue);
+export function useModelConfigs(defaultValue: ModelConfig[] = [], skipInitialLoad: boolean = false) {
+  const [data, updateData, loading, error, loadData] = useApiData<ModelConfig[]>('model-configs', defaultValue, skipInitialLoad);
   
   const saveModelConfig = async (config: ModelConfig) => {
     try {
@@ -92,11 +95,11 @@ export function useModelConfigs(defaultValue: ModelConfig[] = []) {
     }
   };
 
-  return { data, loading, error, saveModelConfig, deleteModelConfig, updateData };
+  return { data, loading, error, saveModelConfig, deleteModelConfig, updateData, loadData };
 }
 
-export function useMCPConfigs(defaultValue: MCPConfig[] = []) {
-  const [data, updateData, loading, error] = useApiData<MCPConfig[]>('mcp-configs', defaultValue);
+export function useMCPConfigs(defaultValue: MCPConfig[] = [], skipInitialLoad: boolean = false) {
+  const [data, updateData, loading, error, loadData] = useApiData<MCPConfig[]>('mcp-configs', defaultValue, skipInitialLoad);
   
   const saveMCPConfig = async (config: MCPConfig) => {
     try {
@@ -117,7 +120,7 @@ export function useMCPConfigs(defaultValue: MCPConfig[] = []) {
     }
   };
 
-  return { data, loading, error, saveMCPConfig, deleteMCPConfig, updateData };
+  return { data, loading, error, saveMCPConfig, deleteMCPConfig, updateData, loadData };
 }
 
 export function useConversations(defaultValue: Conversation[] = []) {
@@ -180,8 +183,8 @@ export function useExternalConnectors(defaultValue: ExternalServiceConnector[] =
   return { data, loading, error, saveExternalConnector, deleteExternalConnector, updateData };
 }
 
-export function useSavedCreations(defaultValue: SavedCreation[] = []) {
-  const [data, updateData, loading, error] = useApiData<SavedCreation[]>('saved-creations', defaultValue);
+export function useSavedCreations(defaultValue: SavedCreation[] = [], skipInitialLoad: boolean = false) {
+  const [data, updateData, loading, error, loadData] = useApiData<SavedCreation[]>('saved-creations', defaultValue, skipInitialLoad);
   
   const saveCreation = async (creation: SavedCreation) => {
     try {
@@ -212,11 +215,11 @@ export function useSavedCreations(defaultValue: SavedCreation[] = []) {
     }
   };
 
-  return { data, loading, error, saveCreation, updateCreation, deleteCreation, updateData };
+  return { data, loading, error, saveCreation, updateCreation, deleteCreation, updateData, loadData };
 }
 
-export function useLorebookEntries(defaultValue: LorebookEntry[] = []) {
-  const [data, updateData, loading, error] = useApiData<LorebookEntry[]>('lorebook', defaultValue);
+export function useLorebookEntries(defaultValue: LorebookEntry[] = [], skipInitialLoad: boolean = false) {
+  const [data, updateData, loading, error, loadData] = useApiData<LorebookEntry[]>('lorebook', defaultValue, skipInitialLoad);
   
   const saveLorebookEntry = async (entry: LorebookEntry) => {
     try {
@@ -237,5 +240,5 @@ export function useLorebookEntries(defaultValue: LorebookEntry[] = []) {
     }
   };
 
-  return { data, loading, error, saveLorebookEntry, deleteLorebookEntry, updateData };
+  return { data, loading, error, saveLorebookEntry, deleteLorebookEntry, updateData, loadData };
 }

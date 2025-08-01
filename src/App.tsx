@@ -16,7 +16,7 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  const { data: modelConfigs, saveModelConfig } = useModelConfigs([
+  const { data: modelConfigs, saveModelConfig, loadData: loadModelConfigs } = useModelConfigs([
     {
       id: 'default-google',
       name: '預設 Google AI',
@@ -26,13 +26,13 @@ function App() {
       temperature: 0.7,
       maxTokens: 2048
     }
-  ]);
+  ], true);
 
-  const { data: mcps, saveMCPConfig } = useMCPConfigs(DEFAULT_MCPS);
+  const { data: mcps, saveMCPConfig, loadData: loadMCPConfigs } = useMCPConfigs(DEFAULT_MCPS, true);
 
-  const { data: savedCreations, saveCreation, updateCreation, deleteCreation } = useSavedCreations([]);
+  const { data: savedCreations, saveCreation, updateCreation, deleteCreation, loadData: loadSavedCreations } = useSavedCreations([], true);
 
-  const { data: lorebook, saveLorebookEntry } = useLorebookEntries([]);
+  const { data: lorebook, saveLorebookEntry, loadData: loadLorebookEntries } = useLorebookEntries([], true);
 
   useEffect(() => {
     const checkExistingAuth = async () => {
@@ -41,6 +41,13 @@ function App() {
         if (sessionToken) {
           const currentUser = await apiService.getCurrentUser();
           setUser(currentUser);
+          
+          await Promise.all([
+            loadModelConfigs(),
+            loadMCPConfigs(),
+            loadSavedCreations(),
+            loadLorebookEntries()
+          ]);
         }
       } catch (error) {
         console.error('Auth check failed:', error);
@@ -57,6 +64,13 @@ function App() {
     try {
       const result = await apiService.login(username);
       setUser(result.user);
+      
+      await Promise.all([
+        loadModelConfigs(),
+        loadMCPConfigs(),
+        loadSavedCreations(),
+        loadLorebookEntries()
+      ]);
     } catch (error) {
       console.error('Login failed:', error);
     }
