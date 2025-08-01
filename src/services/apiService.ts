@@ -248,10 +248,15 @@ class ApiService {
     return response.json();
   }
 
-  async generateContent(request: { prompt: string; mcpConfigId?: string; files?: any[] }): Promise<any> {
+  async generateContent(data: { prompt: string; mcpConfigId: string; files?: any[] }): Promise<any> {
     return this.request('/generate', {
       method: 'POST',
-      body: JSON.stringify(request),
+      body: JSON.stringify({
+        prompt: data.prompt,
+        mcp_id: data.mcpConfigId,
+        user_settings: {},
+        reference_files: data.files || []
+      })
     });
   }
 

@@ -3,6 +3,7 @@ import { Upload, Zap, Save, Copy, Download } from 'lucide-react';
 import { MCPConfig, GeneratorOutput, SavedCreation } from '../types';
 import { generateTitleFromNarrative, generateId } from '../utils';
 import { InteractivePlayer } from './InteractivePlayer';
+import apiService from '../services/apiService';
 
 interface GeneratorViewProps {
   mcps: MCPConfig[];
@@ -53,32 +54,16 @@ export function GeneratorView({ mcps, onSaveCreation }: GeneratorViewProps) {
         });
       }
 
-      console.log('GeneratorView: Making API call...', { 
-        url: `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/generate`,
-        payload: { prompt, mcp_id: selectedMcpId, user_settings: {}, reference_files: files || [] }
+      console.log('GeneratorView: Making API call via apiService...', { 
+        payload: { prompt, mcpConfigId: selectedMcpId, files }
       });
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('session_token')}`
-        },
-        body: JSON.stringify({
-          prompt,
-          mcp_id: selectedMcpId,
-          user_settings: {},
-          reference_files: files || []
-        })
+      const result = await apiService.generateContent({
+        prompt,
+        mcpConfigId: selectedMcpId,
+        files
       });
 
-      console.log('GeneratorView: API response received', { status: response.status, ok: response.ok });
-
-      if (!response.ok) {
-        throw new Error(`Generation failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
       console.log('GeneratorView: API result received', { hasNarrative: !!result.narrative, hasStoryGraph: !!result.storyGraph });
       setOutput(result);
       setActiveTab('visual');

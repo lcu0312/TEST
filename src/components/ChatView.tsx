@@ -4,6 +4,7 @@ import { ModelConfig, ChatMessage, FileAnalysis, MultiAIWorkflow, Conversation }
 import { analyzeFile, createDefaultWorkflow } from '../services/aiService';
 import { generateId } from '../utils';
 import { useConversations } from '../hooks/useApiData';
+import apiService from '../services/apiService';
 
 interface ChatViewProps {
   models: ModelConfig[];
@@ -130,23 +131,10 @@ export function ChatView({ models, userId }: ChatViewProps) {
     setIsSending(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('session_token')}`
-        },
-        body: JSON.stringify({
-          message: inputMessage,
-          conversationId: currentConversationId
-        })
+      const result = await apiService.sendChatMessage({
+        message: inputMessage,
+        conversationId: currentConversationId ?? undefined
       });
-
-      if (!response.ok) {
-        throw new Error(`Chat failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
 
       const assistantMessage: ChatMessage = {
         id: result.message_id || generateId(),
