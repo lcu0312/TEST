@@ -253,9 +253,8 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({
         prompt: data.prompt,
-        mcp_id: data.mcpConfigId,
-        user_settings: {},
-        reference_files: data.files || []
+        mcpConfigId: data.mcpConfigId,
+        files: data.files || []
       })
     });
   }
@@ -265,6 +264,10 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(request),
     });
+  }
+
+  async detectAvailableModels(): Promise<any> {
+    return this.request('/ai/detect-models');
   }
 }
 
