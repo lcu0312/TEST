@@ -1,6 +1,10 @@
 import { ModelConfig, MCPConfig, SavedCreation, LorebookEntry, Conversation, ExternalServiceConnector } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const isElectron = typeof window !== 'undefined' && window.process && (window.process as any).type;
+
+const API_BASE_URL = isElectron 
+  ? 'offline' // Use offline mode for Electron
+  : (import.meta.env.VITE_API_URL || 'http://localhost:8000');
 
 class ApiService {
   private sessionToken: string | null = null;
@@ -17,6 +21,10 @@ class ApiService {
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    if (API_BASE_URL === 'offline') {
+      return this.handleOfflineRequest<T>(endpoint, options);
+    }
+
     const url = `${API_BASE_URL}${endpoint}`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -44,6 +52,48 @@ class ApiService {
     return response.json();
   }
 
+  private async handleOfflineRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const method = options.method || 'GET';
+    
+    switch (endpoint) {
+      case '/auth/login':
+        if (method === 'POST') {
+          const body = JSON.parse(options.body as string);
+          const sessionToken = `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          return {
+            session_token: sessionToken,
+            user: { username: body.username, id: body.username }
+          } as T;
+        }
+        break;
+        
+      case '/auth/me':
+        const token = this.getSessionToken();
+        if (token && token.startsWith('offline_')) {
+          const username = localStorage.getItem('offline_username') || 'user';
+          return { username, id: username } as T;
+        }
+        throw new Error('Authentication required');
+        
+      case '/auth/logout':
+        localStorage.removeItem('offline_username');
+        return {} as T;
+        
+      case '/model-configs':
+      case '/mcp-configs':
+      case '/conversations':
+      case '/external-connectors':
+      case '/saved-creations':
+      case '/lorebook':
+        return [] as T;
+        
+      default:
+        return {} as T;
+    }
+    
+    throw new Error(`Offline mode: ${endpoint} not implemented`);
+  }
+
   async login(username: string): Promise<{ session_token: string; user: any }> {
     const result = await this.request<{ session_token: string; user: any }>('/auth/login', {
       method: 'POST',
@@ -52,6 +102,11 @@ class ApiService {
 
     this.sessionToken = result.session_token;
     localStorage.setItem('session_token', this.sessionToken);
+    
+    if (API_BASE_URL === 'offline') {
+      localStorage.setItem('offline_username', username);
+    }
+    
     return result;
   }
 
