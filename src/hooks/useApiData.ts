@@ -123,8 +123,8 @@ export function useMCPConfigs(defaultValue: MCPConfig[] = [], skipInitialLoad: b
   return { data, loading, error, saveMCPConfig, deleteMCPConfig, updateData, loadData };
 }
 
-export function useConversations(defaultValue: Conversation[] = []) {
-  const [data, updateData, loading, error] = useApiData<Conversation[]>('conversations', defaultValue);
+export function useConversations(defaultValue: Conversation[] = [], skipInitialLoad: boolean = false) {
+  const [data, updateData, loading, error, loadData] = useApiData<Conversation[]>('conversations', defaultValue, skipInitialLoad);
   
   const saveConversation = async (conversation: Conversation) => {
     try {
@@ -155,7 +155,7 @@ export function useConversations(defaultValue: Conversation[] = []) {
     }
   };
 
-  return { data: data, conversations: data, loading, error, createConversation: saveConversation, updateConversation, deleteConversation, updateData };
+  return { data: data, conversations: data, loading, error, createConversation: saveConversation, updateConversation, deleteConversation, updateData, loadData };
 }
 
 export function useExternalConnectors(defaultValue: ExternalServiceConnector[] = []) {

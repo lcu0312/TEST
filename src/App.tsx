@@ -34,6 +34,8 @@ function App() {
 
   const { data: lorebook, saveLorebookEntry, loadData: loadLorebookEntries } = useLorebookEntries([], true);
 
+
+
   useEffect(() => {
     const checkExistingAuth = async () => {
       console.log('App: checkExistingAuth called');
@@ -55,7 +57,7 @@ function App() {
             loadModelConfigs(),
             loadMCPConfigs(),
             loadSavedCreations(),
-            loadLorebookEntries()
+            loadLorebookEntries(),
           ]);
           console.log('App: All data loaded successfully');
         } else {
