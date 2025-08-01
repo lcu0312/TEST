@@ -36,23 +36,37 @@ function App() {
 
   useEffect(() => {
     const checkExistingAuth = async () => {
+      console.log('App: checkExistingAuth called');
       try {
-        const sessionToken = localStorage.getItem('session_token');
+        let sessionToken = localStorage.getItem('session_token') || localStorage.getItem('sessionToken');
+        console.log('App: Session token found:', sessionToken ? 'yes' : 'no');
+        
         if (sessionToken) {
+          localStorage.setItem('session_token', sessionToken);
+          localStorage.removeItem('sessionToken'); // Remove old key if exists
+          
+          console.log('App: Getting current user...');
           const currentUser = await apiService.getCurrentUser();
+          console.log('App: Current user:', currentUser);
           setUser(currentUser);
           
+          console.log('App: Loading user data...');
           await Promise.all([
             loadModelConfigs(),
             loadMCPConfigs(),
             loadSavedCreations(),
             loadLorebookEntries()
           ]);
+          console.log('App: All data loaded successfully');
+        } else {
+          console.log('App: No session token found');
         }
       } catch (error) {
-        console.error('Auth check failed:', error);
+        console.error('App: Auth check failed:', error);
         localStorage.removeItem('session_token');
+        localStorage.removeItem('sessionToken');
       } finally {
+        console.log('App: Setting isCheckingAuth to false');
         setIsCheckingAuth(false);
       }
     };
@@ -61,18 +75,24 @@ function App() {
   }, []);
 
   const handleLogin = async (username: string) => {
+    console.log('App: handleLogin called with username:', username);
     try {
+      console.log('App: Calling apiService.login...');
       const result = await apiService.login(username);
+      console.log('App: Login successful, user:', result.user);
       setUser(result.user);
       
+      console.log('App: Loading user data...');
       await Promise.all([
         loadModelConfigs(),
         loadMCPConfigs(),
         loadSavedCreations(),
         loadLorebookEntries()
       ]);
+      console.log('App: All data loaded successfully');
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('App: Login failed:', error);
+      throw error;
     }
   };
 

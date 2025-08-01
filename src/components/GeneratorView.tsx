@@ -26,11 +26,20 @@ export function GeneratorView({ mcps, onSaveCreation }: GeneratorViewProps) {
   };
 
   const handleGenerate = async () => {
-    if (!prompt.trim() || !selectedMcpId) return;
+    console.log('GeneratorView: handleGenerate called', { prompt: prompt.trim(), selectedMcpId });
+    
+    if (!prompt.trim() || !selectedMcpId) {
+      console.log('GeneratorView: Validation failed', { hasPrompt: !!prompt.trim(), hasSelectedMcp: !!selectedMcpId });
+      return;
+    }
 
     const selectedMcp = mcps.find(m => m.id === selectedMcpId);
-    if (!selectedMcp) return;
+    if (!selectedMcp) {
+      console.log('GeneratorView: Selected MCP not found', { selectedMcpId, availableMcps: mcps.map(m => m.id) });
+      return;
+    }
 
+    console.log('GeneratorView: Starting generation...', { selectedMcp: selectedMcp.name });
     setIsGenerating(true);
     setCurrentStep('準備生成...');
 
@@ -44,6 +53,11 @@ export function GeneratorView({ mcps, onSaveCreation }: GeneratorViewProps) {
         });
       }
 
+      console.log('GeneratorView: Making API call...', { 
+        url: `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/generate`,
+        payload: { prompt, mcp_id: selectedMcpId, user_settings: {}, reference_files: files || [] }
+      });
+
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/generate`, {
         method: 'POST',
         headers: {
@@ -52,20 +66,24 @@ export function GeneratorView({ mcps, onSaveCreation }: GeneratorViewProps) {
         },
         body: JSON.stringify({
           prompt,
-          mcpConfigId: selectedMcpId,
-          files
+          mcp_id: selectedMcpId,
+          user_settings: {},
+          reference_files: files || []
         })
       });
+
+      console.log('GeneratorView: API response received', { status: response.status, ok: response.ok });
 
       if (!response.ok) {
         throw new Error(`Generation failed: ${response.statusText}`);
       }
 
       const result = await response.json();
+      console.log('GeneratorView: API result received', { hasNarrative: !!result.narrative, hasStoryGraph: !!result.storyGraph });
       setOutput(result);
       setActiveTab('visual');
     } catch (error) {
-      console.error('Generation failed:', error);
+      console.error('GeneratorView: Generation failed:', error);
       alert('生成失敗，請檢查設定和網路連接');
     } finally {
       setIsGenerating(false);
@@ -232,7 +250,22 @@ export function GeneratorView({ mcps, onSaveCreation }: GeneratorViewProps) {
 
           <button
             type="button"
-            onClick={handleGenerate}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('GeneratorView: Button mousedown, calling handleGenerate');
+              if (!isGenerating && prompt.trim()) {
+                handleGenerate();
+              }
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('GeneratorView: Button clicked, calling handleGenerate');
+              if (!isGenerating && prompt.trim()) {
+                handleGenerate();
+              }
+            }}
             disabled={isGenerating || !prompt.trim()}
             className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 disabled:from-stone-400 disabled:to-stone-500 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed"
           >

@@ -9,12 +9,21 @@ export function LoginView({ onLogin }: LoginViewProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('LoginView: Form submitted', { username, password: password ? '***' : '' });
     
     if (username.trim() && password.trim()) {
-      onLogin(username);
+      try {
+        console.log('LoginView: Calling onLogin with username:', username);
+        await onLogin(username);
+        console.log('LoginView: onLogin completed successfully');
+      } catch (error) {
+        console.error('LoginView: Login error:', error);
+        setError(`登入失敗: ${error instanceof Error ? error.message : '未知錯誤'}`);
+      }
     } else {
+      console.log('LoginView: Validation failed - empty fields');
       setError('請輸入用戶名和密碼');
     }
   };
