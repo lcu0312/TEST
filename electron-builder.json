@@ -5,14 +5,19 @@
     "output": "dist-electron"
   },
   "files": [
+    "dist/**/*",
     "electron/**/*",
     "package.json"
   ],
   "extraResources": [
     {
       "from": "dist",
-      "to": "dist"
+      "to": "dist",
+      "filter": ["**/*"]
     }
+  ],
+  "asarUnpack": [
+    "dist/**/*"
   ],
   "win": {
     "icon": "public/icons/icon.png",
