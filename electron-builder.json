@@ -5,9 +5,14 @@
     "output": "dist-electron"
   },
   "files": [
-    "dist/**/*",
     "electron/**/*",
     "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "dist",
+      "to": "dist"
+    }
   ],
   "win": {
     "icon": "public/icons/icon.png",
