@@ -24,6 +24,7 @@ class ApiService {
     };
 
     const token = this.getSessionToken();
+    console.log(`DEBUG: Making request to ${endpoint} with token:`, token ? 'present' : 'missing');
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -33,8 +34,10 @@ class ApiService {
       headers,
     });
 
+    console.log(`DEBUG: Response status for ${endpoint}:`, response.status);
     if (!response.ok) {
       if (response.status === 401) {
+        console.log('DEBUG: 401 error, calling logout');
         this.logout();
         throw new Error('Authentication required');
       }
