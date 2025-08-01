@@ -155,7 +155,7 @@ export function useConversations(defaultValue: Conversation[] = []) {
     }
   };
 
-  return { data, loading, error, saveConversation, updateConversation, deleteConversation, updateData };
+  return { data: data, conversations: data, loading, error, createConversation: saveConversation, updateConversation, deleteConversation, updateData };
 }
 
 export function useExternalConnectors(defaultValue: ExternalServiceConnector[] = []) {

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, RotateCcw } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Play, Pause, Volume2, VolumeX, RotateCcw, Video, Music, SkipBack, SkipForward } from 'lucide-react';
 import { StoryGraph } from '../types';
 
 interface InteractivePlayerProps {
@@ -10,6 +10,10 @@ export function InteractivePlayer({ storyGraph }: InteractivePlayerProps) {
   const [currentNodeId, setCurrentNodeId] = useState(storyGraph.startNodeId);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [playbackMode, setPlaybackMode] = useState<'audio' | 'video'>('audio');
+  const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
+  
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const currentNode = storyGraph.nodes.find(node => node.id === currentNodeId);
 
@@ -34,14 +38,16 @@ export function InteractivePlayer({ storyGraph }: InteractivePlayerProps) {
     
     setIsPlaying(true);
     
-    if (!isMuted && 'speechSynthesis' in window) {
+    if (playbackMode === 'audio' && !isMuted && 'speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(currentNode.narration);
       utterance.lang = 'zh-TW';
-      utterance.rate = 0.9;
+      utterance.rate = playbackSpeed;
       utterance.pitch = 1.0;
       utterance.onend = () => setIsPlaying(false);
       utterance.onerror = () => setIsPlaying(false);
       speechSynthesis.speak(utterance);
+    } else if (playbackMode === 'video') {
+      setTimeout(() => setIsPlaying(false), 3000);
     } else {
       setTimeout(() => setIsPlaying(false), Math.max(3000, currentNode.narration.length * 50));
     }
@@ -49,8 +55,38 @@ export function InteractivePlayer({ storyGraph }: InteractivePlayerProps) {
 
   const handleStop = () => {
     setIsPlaying(false);
-    if ('speechSynthesis' in window) {
+    if (playbackMode === 'audio' && 'speechSynthesis' in window) {
       speechSynthesis.cancel();
+    } else if (playbackMode === 'video' && videoRef.current) {
+      videoRef.current.pause();
+    }
+  };
+
+  const changePlaybackSpeed = (speed: number) => {
+    setPlaybackSpeed(speed);
+    if (playbackMode === 'audio' && isPlaying) {
+      handleStop();
+      setTimeout(() => handlePlay(), 100);
+    } else if (playbackMode === 'video' && videoRef.current) {
+      videoRef.current.playbackRate = speed;
+    }
+  };
+
+  const togglePlaybackMode = () => {
+    handleStop();
+    setPlaybackMode(prev => prev === 'audio' ? 'video' : 'audio');
+  };
+
+  const skipToNext = () => {
+    if (currentNode && currentNode.choices.length > 0) {
+      handleChoice(currentNode.choices[0].nextNodeId);
+    }
+  };
+
+  const skipToPrevious = () => {
+    const nodeIndex = storyGraph.nodes.findIndex(node => node.id === currentNodeId);
+    if (nodeIndex > 0) {
+      setCurrentNodeId(storyGraph.nodes[nodeIndex - 1].id);
     }
   };
 
@@ -108,30 +144,98 @@ export function InteractivePlayer({ storyGraph }: InteractivePlayerProps) {
 
       {/* Player Controls */}
       <div className="bg-stone-300 border-t border-stone-400 p-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="flex items-center gap-2">
             <button
-              onClick={isPlaying ? handleStop : handlePlay}
-              className="flex items-center justify-center w-12 h-12 bg-amber-600 hover:bg-amber-700 text-white rounded-full transition-colors"
+              onClick={togglePlaybackMode}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                playbackMode === 'audio' 
+                  ? 'bg-amber-600 text-white' 
+                  : 'bg-stone-200 text-stone-700 hover:bg-stone-300'
+              }`}
             >
-              {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+              <Music size={16} />
+              音頻
             </button>
-            
             <button
-              onClick={() => setIsMuted(!isMuted)}
-              className="flex items-center justify-center w-10 h-10 bg-stone-400 hover:bg-stone-500 text-white rounded-full transition-colors"
+              onClick={togglePlaybackMode}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                playbackMode === 'video' 
+                  ? 'bg-amber-600 text-white' 
+                  : 'bg-stone-200 text-stone-700 hover:bg-stone-300'
+              }`}
             >
-              {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+              <Video size={16} />
+              視頻
             </button>
           </div>
 
-          <button
-            onClick={handleRestart}
-            className="flex items-center gap-2 px-3 py-2 bg-stone-400 hover:bg-stone-500 text-white rounded-lg transition-colors"
-          >
-            <RotateCcw size={16} />
-            重新開始
-          </button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={skipToPrevious}
+                className="flex items-center justify-center w-10 h-10 bg-stone-400 hover:bg-stone-500 text-white rounded-full transition-colors"
+              >
+                <SkipBack size={16} />
+              </button>
+              
+              <button
+                onClick={isPlaying ? handleStop : handlePlay}
+                className="flex items-center justify-center w-12 h-12 bg-amber-600 hover:bg-amber-700 text-white rounded-full transition-colors"
+              >
+                {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+              </button>
+              
+              <button
+                onClick={skipToNext}
+                className="flex items-center justify-center w-10 h-10 bg-stone-400 hover:bg-stone-500 text-white rounded-full transition-colors"
+              >
+                <SkipForward size={16} />
+              </button>
+              
+              <button
+                onClick={() => setIsMuted(!isMuted)}
+                className="flex items-center justify-center w-10 h-10 bg-stone-400 hover:bg-stone-500 text-white rounded-full transition-colors"
+              >
+                {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+              </button>
+            </div>
+
+            <button
+              onClick={handleRestart}
+              className="flex items-center gap-2 px-3 py-2 bg-stone-400 hover:bg-stone-500 text-white rounded-lg transition-colors"
+            >
+              <RotateCcw size={16} />
+              重新開始
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-stone-600">播放速度:</span>
+            {[0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map(speed => (
+              <button
+                key={speed}
+                onClick={() => changePlaybackSpeed(speed)}
+                className={`px-2 py-1 text-sm rounded transition-colors ${
+                  playbackSpeed === speed
+                    ? 'bg-amber-600 text-white'
+                    : 'bg-stone-200 text-stone-700 hover:bg-stone-300'
+                }`}
+              >
+                {speed}x
+              </button>
+            ))}
+          </div>
+
+          {playbackMode === 'video' && (
+            <video
+              ref={videoRef}
+              className="w-full max-w-md mx-auto rounded-lg"
+              controls
+              muted={isMuted}
+              style={{ display: 'none' }}
+            />
+          )}
         </div>
 
         {/* Narration Text */}

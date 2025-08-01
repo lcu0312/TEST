@@ -25,7 +25,7 @@ export function ChatView({ models, userId }: ChatViewProps) {
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   
-  const { data: conversations, saveConversation, updateConversation, deleteConversation: deleteConversationApi } = useConversations([]);
+  const { data: conversations, createConversation, updateConversation, deleteConversation: deleteConversationApi } = useConversations([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   
   const currentConversation = conversations.find(c => c.id === currentConversationId);
@@ -247,7 +247,7 @@ export function ChatView({ models, userId }: ChatViewProps) {
         messages: []
       };
       
-      await saveConversation(newConversation);
+      await createConversation(newConversation);
       setCurrentConversationId(newConversation.id);
       setMessages([]);
     } catch (error) {

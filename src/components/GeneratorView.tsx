@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Zap, Save, Copy } from 'lucide-react';
+import { Upload, Zap, Save, Copy, Download } from 'lucide-react';
 import { MCPConfig, GeneratorOutput, SavedCreation } from '../types';
 import { generateTitleFromNarrative, generateId } from '../utils';
 import { InteractivePlayer } from './InteractivePlayer';
@@ -94,6 +94,83 @@ export function GeneratorView({ mcps, onSaveCreation }: GeneratorViewProps) {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     alert('已複製到剪貼板！');
+  };
+
+  const handleDownloadProject = () => {
+    if (!output) return;
+
+    const projectData = {
+      title: generateTitleFromNarrative(output.narrative),
+      created_at: new Date().toISOString(),
+      prompt: prompt,
+      mcp_config: mcps.find(m => m.id === selectedMcpId)?.name || 'Default',
+      output: output,
+      version: '1.0.0'
+    };
+
+    const projectBlob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+    const projectUrl = URL.createObjectURL(projectBlob);
+    const projectLink = document.createElement('a');
+    projectLink.href = projectUrl;
+    projectLink.download = `${projectData.title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_')}_project.json`;
+    projectLink.click();
+    URL.revokeObjectURL(projectUrl);
+
+    const narrativeBlob = new Blob([output.narrative], { type: 'text/plain; charset=utf-8' });
+    const narrativeUrl = URL.createObjectURL(narrativeBlob);
+    const narrativeLink = document.createElement('a');
+    narrativeLink.href = narrativeUrl;
+    narrativeLink.download = `${projectData.title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_')}_narrative.txt`;
+    narrativeLink.click();
+    URL.revokeObjectURL(narrativeUrl);
+
+    const codeBlob = new Blob([output.code], { type: 'text/javascript; charset=utf-8' });
+    const codeUrl = URL.createObjectURL(codeBlob);
+    const codeLink = document.createElement('a');
+    codeLink.href = codeUrl;
+    codeLink.download = `${projectData.title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_')}_code.js`;
+    codeLink.click();
+    URL.revokeObjectURL(codeUrl);
+
+    const storyGraphBlob = new Blob([JSON.stringify(output.storyGraph, null, 2)], { type: 'application/json' });
+    const storyGraphUrl = URL.createObjectURL(storyGraphBlob);
+    const storyGraphLink = document.createElement('a');
+    storyGraphLink.href = storyGraphUrl;
+    storyGraphLink.download = `${projectData.title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_')}_story-graph.json`;
+    storyGraphLink.click();
+    URL.revokeObjectURL(storyGraphUrl);
+
+    const readmeContent = `# ${projectData.title}
+
+## 專案資訊
+- 創建時間: ${new Date(projectData.created_at).toLocaleString('zh-TW')}
+- 原始提示: ${prompt}
+- MCP 管道: ${projectData.mcp_config}
+- 版本: ${projectData.version}
+
+## 檔案說明
+- \`project.json\`: 完整專案元數據
+- \`narrative.txt\`: 生成的敘述內容
+- \`code.js\`: 生成的程式碼
+- \`story-graph.json\`: 互動故事圖結構
+- \`README.md\`: 此說明檔案
+
+## 使用方式
+1. 將所有檔案放在同一個資料夾中
+2. 使用 MirroVerse Engine 匯入 \`project.json\` 檔案
+3. 或者直接查看各個檔案內容
+
+---
+由 MirroVerse Engine 生成
+`;
+
+    const readmeBlob = new Blob([readmeContent], { type: 'text/markdown; charset=utf-8' });
+    const readmeUrl = URL.createObjectURL(readmeBlob);
+    const readmeLink = document.createElement('a');
+    readmeLink.href = readmeUrl;
+    readmeLink.download = `${projectData.title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_')}_README.md`;
+    readmeLink.click();
+    URL.revokeObjectURL(readmeUrl);
   };
 
   return (
@@ -237,13 +314,21 @@ export function GeneratorView({ mcps, onSaveCreation }: GeneratorViewProps) {
             )}
           </div>
 
-          <div className="border-t border-stone-300 p-4">
+          <div className="border-t border-stone-300 p-4 flex gap-3">
             <button
               onClick={handleSave}
               className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
             >
               <Save size={16} />
               儲存至創作庫
+            </button>
+            
+            <button
+              onClick={handleDownloadProject}
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+            >
+              <Download size={16} />
+              下載專案
             </button>
           </div>
         </div>
