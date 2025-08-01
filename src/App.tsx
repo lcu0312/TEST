@@ -175,12 +175,28 @@ function App() {
               ].map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
-                  onClick={() => setCurrentView(key as ViewMode)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log(`Navigation clicked: ${key}`);
+                    setCurrentView(key as ViewMode);
+                  }}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    console.log(`Navigation mousedown: ${key}`);
+                    setCurrentView(key as ViewMode);
+                  }}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    console.log(`Navigation touchstart: ${key}`);
+                    setCurrentView(key as ViewMode);
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 cursor-pointer ${
                     currentView === key
                       ? 'bg-amber-600 text-white shadow-lg'
                       : 'text-stone-600 hover:text-stone-800 hover:bg-stone-200/50'
                   }`}
+                  style={{ pointerEvents: 'auto', userSelect: 'none' }}
                 >
                   <Icon size={18} />
                   <span className="hidden sm:inline">{label}</span>
