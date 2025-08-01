@@ -27,16 +27,21 @@ function createWindow() {
     const possiblePaths = [
       path.join(__dirname, '../dist/index.html'),
       path.join(process.resourcesPath, 'dist/index.html'),
-      path.join(__dirname, '../../dist/index.html')
+      path.join(__dirname, '../../dist/index.html'),
+      path.join(process.resourcesPath, '../dist/index.html'),
+      path.join(app.getAppPath(), 'dist/index.html')
     ];
     
     let loaded = false;
     for (const filePath of possiblePaths) {
       try {
         if (require('fs').existsSync(filePath)) {
+          console.log(`Loading from: ${filePath}`);
           mainWindow.loadFile(filePath);
           loaded = true;
           break;
+        } else {
+          console.log(`Path not found: ${filePath}`);
         }
       } catch (error) {
         console.log(`Failed to load from ${filePath}:`, error);
@@ -45,6 +50,7 @@ function createWindow() {
     
     if (!loaded) {
       console.error('Could not find index.html in any expected location');
+      console.log('Available paths checked:', possiblePaths);
       mainWindow.loadURL('data:text/html,<h1>Error: Could not load application</h1>');
     }
   }
