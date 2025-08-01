@@ -1,10 +1,6 @@
 import { ModelConfig, MCPConfig, SavedCreation, LorebookEntry, Conversation, ExternalServiceConnector } from '../types';
 
-const isElectron = typeof window !== 'undefined' && window.process && (window.process as any).type;
-
-const API_BASE_URL = isElectron 
-  ? 'offline' // Use offline mode for Electron
-  : (import.meta.env.VITE_API_URL || 'http://localhost:8000');
+const API_BASE_URL = 'offline';
 
 class ApiService {
   private sessionToken: string | null = null;
