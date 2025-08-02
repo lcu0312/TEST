@@ -601,7 +601,12 @@ export function ChatView({ models, userId }: ChatViewProps) {
               </button>
 
               <button
-                onClick={handleSend}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSend();
+                }}
                 disabled={(!inputMessage.trim() && attachments.length === 0) || isSending}
                 className="flex items-center justify-center w-12 h-12 bg-amber-600 hover:bg-amber-700 disabled:bg-stone-400 disabled:cursor-not-allowed text-white rounded-xl transition-colors"
               >
