@@ -173,7 +173,7 @@ class InMemoryDatabase:
         try:
             import os
             import json
-            session_file = "/tmp/sessions.json"
+            session_file = os.path.expanduser("~/sessions.json")
             if os.path.exists(session_file):
                 with open(session_file, 'r') as f:
                     sessions_data = json.load(f)
@@ -183,6 +183,9 @@ class InMemoryDatabase:
                 print(f"DEBUG: No session file found, starting fresh")
         except Exception as e:
             print(f"DEBUG: Failed to restore sessions from file: {e}")
+            default_session = str(uuid.uuid4())
+            self.sessions[default_session] = "default_user"
+            print(f"DEBUG: Created fallback session {default_session[:8]}... for default_user")
     
     def create_session(self, user_id: str) -> str:
         session_token = str(uuid.uuid4())
@@ -193,7 +196,7 @@ class InMemoryDatabase:
         try:
             import os
             import json
-            session_file = "/tmp/sessions.json"
+            session_file = os.path.expanduser("~/sessions.json")
             sessions_data = {}
             if os.path.exists(session_file):
                 with open(session_file, 'r') as f:
@@ -201,7 +204,7 @@ class InMemoryDatabase:
             sessions_data[session_token] = user_id
             with open(session_file, 'w') as f:
                 json.dump(sessions_data, f)
-            print(f"DEBUG: Session persisted to file")
+            print(f"DEBUG: Session persisted to file at {session_file}")
         except Exception as e:
             print(f"DEBUG: Failed to persist session: {e}")
         
@@ -212,22 +215,21 @@ class InMemoryDatabase:
         print(f"DEBUG: Available sessions: {[s[:8] + '...' for s in self.sessions.keys()]}")
         print(f"DEBUG: Total sessions available: {len(self.sessions)}")
         
-        user_id = self.sessions.get(session_token)
+        try:
+            import os
+            import json
+            session_file = os.path.expanduser("~/sessions.json")
+            if os.path.exists(session_file):
+                with open(session_file, 'r') as f:
+                    sessions_data = json.load(f)
+                for token, uid in sessions_data.items():
+                    if token not in self.sessions:
+                        self.sessions[token] = uid
+                print(f"DEBUG: Restored {len(sessions_data)} sessions from file")
+        except Exception as e:
+            print(f"DEBUG: Failed to restore sessions from file: {e}")
         
-        if not user_id:
-            try:
-                import os
-                import json
-                session_file = "/tmp/sessions.json"
-                if os.path.exists(session_file):
-                    with open(session_file, 'r') as f:
-                        sessions_data = json.load(f)
-                    user_id = sessions_data.get(session_token)
-                    if user_id:
-                        self.sessions[session_token] = user_id
-                        print(f"DEBUG: Session restored from file for user {user_id}")
-            except Exception as e:
-                print(f"DEBUG: Failed to restore session from file: {e}")
+        user_id = self.sessions.get(session_token)
         
         if user_id:
             user = self.users.get(user_id)
@@ -239,12 +241,29 @@ class InMemoryDatabase:
     def invalidate_session(self, session_token: str):
         if session_token in self.sessions:
             del self.sessions[session_token]
+            try:
+                import os
+                import json
+                session_file = os.path.expanduser("~/sessions.json")
+                if os.path.exists(session_file):
+                    with open(session_file, 'r') as f:
+                        sessions_data = json.load(f)
+                    if session_token in sessions_data:
+                        del sessions_data[session_token]
+                        with open(session_file, 'w') as f:
+                            json.dump(sessions_data, f)
+                        print(f"DEBUG: Session {session_token[:8]}... removed from persistent storage")
+            except Exception as e:
+                print(f"DEBUG: Failed to remove session from persistent storage: {e}")
     
     def get_user_by_username(self, username: str) -> Optional[User]:
         for user in self.users.values():
             if user.username == username:
                 return user
         return None
+    
+    def get_user_by_id(self, user_id: str) -> Optional[User]:
+        return self.users.get(user_id)
     
     def get_user_data(self, user_id: str, data_type: str) -> List:
         data_map = {

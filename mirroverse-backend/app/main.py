@@ -37,8 +37,12 @@ async def login(request: LoginRequest):
         )
         db.users[user.id] = user
     
+    from app.auth import create_jwt_token
+    jwt_token = create_jwt_token(user.id)
+    
     session_token = db.create_session(user.id)
-    return LoginResponse(session_token=session_token, user=user)
+    
+    return LoginResponse(session_token=jwt_token, user=user)
 
 @app.post("/auth/logout")
 async def logout(request: LogoutRequest):
@@ -336,6 +340,7 @@ async def chat(request: ChatRequest, current_user: User = Depends(get_current_us
 async def detect_available_models(current_user: User = Depends(get_current_user)):
     """Auto-detect available AI models based on configured providers"""
     try:
+        from app.engine_modules import engine
         user_model_configs = db.get_user_data(current_user.id, 'model_configs')
         
         detected_models = []
@@ -351,11 +356,21 @@ async def detect_available_models(current_user: User = Depends(get_current_user)
                 }
             
             if provider_status[provider]["available"]:
+                model_capabilities = _get_model_capabilities(provider, config.model)
+                
                 provider_status[provider]["models"].append({
                     "id": config.id,
                     "name": config.name,
                     "model": config.model,
-                    "capabilities": _get_model_capabilities(provider, config.model)
+                    "capabilities": model_capabilities,
+                    "parameters": {
+                        "supports_streaming": provider in ["openai", "google"],
+                        "max_context_length": _get_max_context_length(provider, config.model),
+                        "supports_function_calling": provider == "openai" and "gpt-4" in config.model.lower(),
+                        "supports_vision": "image" in model_capabilities,
+                        "cost_per_1k_tokens": _get_model_cost(provider, config.model)
+                    },
+                    "validation_status": "pending"
                 })
                 detected_models.append(config.id)
         
@@ -363,7 +378,13 @@ async def detect_available_models(current_user: User = Depends(get_current_user)
             "detected_models": detected_models,
             "provider_status": provider_status,
             "total_available": len(detected_models),
-            "recommendations": _get_model_recommendations(provider_status)
+            "recommendations": _get_model_recommendations(provider_status),
+            "enhanced_features": {
+                "parameter_validation": True,
+                "streaming_support": True,
+                "performance_monitoring": True,
+                "advanced_error_handling": True
+            }
         }
         
     except Exception as e:
@@ -399,6 +420,97 @@ def _get_model_capabilities(provider: str, model: str) -> List[str]:
             return capabilities
     
     return ["text"]
+
+@app.post("/ai/validate-model")
+async def validate_model_config(config: ModelConfig, current_user: Optional[User] = Depends(get_optional_user)):
+    """Validate a model configuration and test API connectivity"""
+    try:
+        from app.engine_modules import engine
+        provider = engine.providers.get(config.provider)
+        
+        if not provider:
+            return {
+                "valid": False,
+                "error": f"Unsupported provider: {config.provider}",
+                "suggestions": ["google", "openai", "anthropic"]
+            }
+        
+        try:
+            provider._validate_model_parameters(config)
+        except ValueError as e:
+            return {
+                "valid": False,
+                "error": f"Parameter validation failed: {str(e)}",
+                "parameter_requirements": {
+                    "temperature": "0.0 - 2.0",
+                    "max_tokens": "1 - 8192",
+                    "top_p": "0.0 - 1.0"
+                }
+            }
+        
+        validation_result = await provider.validate_model_config(config)
+        return validation_result
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Model validation failed: {str(e)}")
+
+def _get_max_context_length(provider: str, model: str) -> int:
+    """Get maximum context length for a model"""
+    context_lengths = {
+        "google": {
+            "gemini-1.5-pro": 2000000,
+            "gemini-1.5-flash": 1000000,
+            "gemini-pro": 32768
+        },
+        "openai": {
+            "gpt-4o": 128000,
+            "gpt-4-turbo": 128000,
+            "gpt-3.5-turbo": 16385
+        },
+        "anthropic": {
+            "claude-3-opus": 200000,
+            "claude-3-sonnet": 200000,
+            "claude-3-haiku": 200000
+        }
+    }
+    
+    provider_models = context_lengths.get(provider, {})
+    model_lower = model.lower()
+    
+    for model_name, length in provider_models.items():
+        if model_name.lower() in model_lower or model_lower in model_name.lower():
+            return length
+    
+    return 4096
+
+def _get_model_cost(provider: str, model: str) -> float:
+    """Get cost per 1K tokens for a model"""
+    costs = {
+        "google": {
+            "gemini-1.5-pro": 0.0035,
+            "gemini-1.5-flash": 0.00035,
+            "gemini-pro": 0.0005
+        },
+        "openai": {
+            "gpt-4o": 0.005,
+            "gpt-4-turbo": 0.01,
+            "gpt-3.5-turbo": 0.0015
+        },
+        "anthropic": {
+            "claude-3-opus": 0.015,
+            "claude-3-sonnet": 0.003,
+            "claude-3-haiku": 0.00025
+        }
+    }
+    
+    provider_models = costs.get(provider, {})
+    model_lower = model.lower()
+    
+    for model_name, cost in provider_models.items():
+        if model_name.lower() in model_lower or model_lower in model_name.lower():
+            return cost
+    
+    return 0.002
 
 def _get_model_recommendations(provider_status: dict) -> List[str]:
     """Get recommendations for missing or additional models"""

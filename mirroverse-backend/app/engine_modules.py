@@ -15,8 +15,42 @@ import logging
 class AIProvider(ABC):
     """Abstract base class for AI providers"""
     
+    def _validate_model_parameters(self, model_config: ModelConfig) -> None:
+        """Validate model parameters before API calls"""
+        params = model_config.parameters
+        
+        if "temperature" in params:
+            temp = params["temperature"]
+            if not isinstance(temp, (int, float)) or temp < 0 or temp > 2:
+                raise ValueError(f"Invalid temperature: {temp}. Must be between 0 and 2.")
+        
+        if "max_tokens" in params:
+            tokens = params["max_tokens"]
+            if not isinstance(tokens, int) or tokens < 1 or tokens > 8192:
+                raise ValueError(f"Invalid max_tokens: {tokens}. Must be between 1 and 8192.")
+    
+    async def _handle_api_error(self, error: Exception, prompt: str, model_config: ModelConfig) -> str:
+        """Handle API errors with fallback mechanisms"""
+        error_msg = str(error).lower()
+        if "quota" in error_msg or "rate limit" in error_msg:
+            return f"[API配額限制] 請稍後重試或檢查API密鑰配額"
+        elif "invalid" in error_msg:
+            return f"[API配置錯誤] 請檢查模型配置和參數設定"
+        else:
+            return f"[API暫時不可用] {str(error)}"
+    
     @abstractmethod
     async def generate_text(self, prompt: str, model_config: ModelConfig, **kwargs) -> str:
+        pass
+    
+    @abstractmethod
+    async def generate_text_stream(self, prompt: str, model_config: ModelConfig, **kwargs):
+        """Generate streaming text response"""
+        pass
+    
+    @abstractmethod
+    async def validate_model_config(self, model_config: ModelConfig) -> Dict[str, Any]:
+        """Validate and return model configuration status"""
         pass
     
     @abstractmethod
@@ -26,16 +60,23 @@ class AIProvider(ABC):
 class GoogleAIProvider(AIProvider):
     async def generate_text(self, prompt: str, model_config: ModelConfig, **kwargs) -> str:
         try:
+            self._validate_model_parameters(model_config)
+            
             if model_config.api_key:
                 genai.configure(api_key=model_config.api_key)
                 model = genai.GenerativeModel(model_config.model or 'gemini-1.5-flash')
+                
+                temperature = max(0.0, min(2.0, model_config.parameters.get("temperature", 0.7)))
+                max_tokens = max(1, min(8192, model_config.parameters.get("max_tokens", 2000)))
                 
                 response = await asyncio.to_thread(
                     model.generate_content,
                     prompt,
                     generation_config=genai.types.GenerationConfig(
-                        temperature=model_config.parameters.get("temperature", 0.7),
-                        max_output_tokens=model_config.parameters.get("max_tokens", 2000)
+                        temperature=temperature,
+                        max_output_tokens=max_tokens,
+                        top_p=model_config.parameters.get("top_p", 0.95),
+                        top_k=model_config.parameters.get("top_k", 40)
                     )
                 )
                 
@@ -45,7 +86,66 @@ class GoogleAIProvider(AIProvider):
                 
         except Exception as e:
             logging.error(f"Google AI API error: {str(e)}")
-            raise Exception(f"Google AI API failed: {str(e)}")
+            return await self._handle_api_error(e, prompt, model_config)
+    
+    async def generate_text_stream(self, prompt: str, model_config: ModelConfig, **kwargs):
+        """Generate streaming text response"""
+        try:
+            self._validate_model_parameters(model_config)
+            
+            if model_config.api_key:
+                genai.configure(api_key=model_config.api_key)
+                model = genai.GenerativeModel(model_config.model or 'gemini-1.5-flash')
+                
+                temperature = max(0.0, min(2.0, model_config.parameters.get("temperature", 0.7)))
+                max_tokens = max(1, min(8192, model_config.parameters.get("max_tokens", 2000)))
+                
+                response = await asyncio.to_thread(
+                    model.generate_content,
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=temperature,
+                        max_output_tokens=max_tokens
+                    ),
+                    stream=True
+                )
+                
+                for chunk in response:
+                    if chunk.text:
+                        yield chunk.text
+            else:
+                yield await self._handle_api_error(Exception("No API key provided"), prompt, model_config)
+                
+        except Exception as e:
+            logging.error(f"Google AI Streaming API error: {str(e)}")
+            yield await self._handle_api_error(e, prompt, model_config)
+    
+    async def validate_model_config(self, model_config: ModelConfig) -> Dict[str, Any]:
+        """Validate Google AI model configuration"""
+        try:
+            self._validate_model_parameters(model_config)
+            
+            if not model_config.api_key:
+                return {"valid": False, "error": "API key required"}
+            
+            genai.configure(api_key=model_config.api_key)
+            model = genai.GenerativeModel(model_config.model or 'gemini-1.5-flash')
+            
+            test_response = await asyncio.to_thread(
+                model.generate_content,
+                "Test connection",
+                generation_config=genai.types.GenerationConfig(max_output_tokens=10)
+            )
+            
+            return {
+                "valid": True,
+                "model_name": model_config.model or 'gemini-1.5-flash',
+                "capabilities": ["text", "image", "creative"],
+                "test_response_length": len(test_response.text)
+            }
+            
+        except Exception as e:
+            return {"valid": False, "error": str(e)}
     
     async def generate_image(self, prompt: str, model_config: ModelConfig, **kwargs) -> str:
         colors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD"]
@@ -56,20 +156,79 @@ class GoogleAIProvider(AIProvider):
 class OpenAIProvider(AIProvider):
     async def generate_text(self, prompt: str, model_config: ModelConfig, **kwargs) -> str:
         try:
+            self._validate_model_parameters(model_config)
             client = openai.AsyncOpenAI(api_key=model_config.api_key)
+            
+            temperature = max(0.0, min(2.0, model_config.parameters.get("temperature", 0.7)))
+            max_tokens = max(1, min(4096, model_config.parameters.get("max_tokens", 2000)))
             
             response = await client.chat.completions.create(
                 model=model_config.model or "gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=model_config.parameters.get("max_tokens", 2000),
-                temperature=model_config.parameters.get("temperature", 0.7)
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=model_config.parameters.get("top_p", 1.0),
+                frequency_penalty=model_config.parameters.get("frequency_penalty", 0.0),
+                presence_penalty=model_config.parameters.get("presence_penalty", 0.0)
             )
             
             return response.choices[0].message.content
             
         except Exception as e:
             logging.error(f"OpenAI API error: {str(e)}")
-            raise Exception(f"OpenAI API failed: {str(e)}")
+            return await self._handle_api_error(e, prompt, model_config)
+    
+    async def generate_text_stream(self, prompt: str, model_config: ModelConfig, **kwargs):
+        """Generate streaming text response"""
+        try:
+            self._validate_model_parameters(model_config)
+            client = openai.AsyncOpenAI(api_key=model_config.api_key)
+            
+            temperature = max(0.0, min(2.0, model_config.parameters.get("temperature", 0.7)))
+            max_tokens = max(1, min(4096, model_config.parameters.get("max_tokens", 2000)))
+            
+            stream = await client.chat.completions.create(
+                model=model_config.model or "gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=model_config.parameters.get("top_p", 1.0),
+                stream=True
+            )
+            
+            async for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+                    
+        except Exception as e:
+            logging.error(f"OpenAI Streaming API error: {str(e)}")
+            yield await self._handle_api_error(e, prompt, model_config)
+    
+    async def validate_model_config(self, model_config: ModelConfig) -> Dict[str, Any]:
+        """Validate OpenAI model configuration"""
+        try:
+            self._validate_model_parameters(model_config)
+            
+            if not model_config.api_key:
+                return {"valid": False, "error": "API key required"}
+            
+            client = openai.AsyncOpenAI(api_key=model_config.api_key)
+            
+            test_response = await client.chat.completions.create(
+                model=model_config.model or "gpt-3.5-turbo",
+                messages=[{"role": "user", "content": "Test connection"}],
+                max_tokens=10
+            )
+            
+            return {
+                "valid": True,
+                "model_name": model_config.model or "gpt-3.5-turbo",
+                "capabilities": ["text", "creative", "analysis"],
+                "test_response_length": len(test_response.choices[0].message.content)
+            }
+            
+        except Exception as e:
+            return {"valid": False, "error": str(e)}
     
     async def generate_image(self, prompt: str, model_config: ModelConfig, **kwargs) -> str:
         try:
@@ -87,18 +246,23 @@ class OpenAIProvider(AIProvider):
             
         except Exception as e:
             logging.error(f"OpenAI Image API error: {str(e)}")
-            raise Exception(f"OpenAI Image API failed: {str(e)}")
+            return await self._handle_api_error(e, prompt, model_config)
 
 class AnthropicProvider(AIProvider):
     async def generate_text(self, prompt: str, model_config: ModelConfig, **kwargs) -> str:
         try:
+            self._validate_model_parameters(model_config)
+            
             if model_config.api_key:
                 client = anthropic.AsyncAnthropic(api_key=model_config.api_key)
                 
+                temperature = max(0.0, min(1.0, model_config.parameters.get("temperature", 0.7)))
+                max_tokens = max(1, min(4096, model_config.parameters.get("max_tokens", 2000)))
+                
                 response = await client.messages.create(
                     model=model_config.model or "claude-3-haiku-20240307",
-                    max_tokens=model_config.parameters.get("max_tokens", 2000),
-                    temperature=model_config.parameters.get("temperature", 0.7),
+                    max_tokens=max_tokens,
+                    temperature=temperature,
                     messages=[{"role": "user", "content": prompt}]
                 )
                 
@@ -108,7 +272,59 @@ class AnthropicProvider(AIProvider):
                 
         except Exception as e:
             logging.error(f"Anthropic API error: {str(e)}")
-            raise Exception(f"Anthropic API failed: {str(e)}")
+            return await self._handle_api_error(e, prompt, model_config)
+    
+    async def generate_text_stream(self, prompt: str, model_config: ModelConfig, **kwargs):
+        """Generate streaming text response"""
+        try:
+            self._validate_model_parameters(model_config)
+            
+            if model_config.api_key:
+                client = anthropic.AsyncAnthropic(api_key=model_config.api_key)
+                
+                temperature = max(0.0, min(1.0, model_config.parameters.get("temperature", 0.7)))
+                max_tokens = max(1, min(4096, model_config.parameters.get("max_tokens", 2000)))
+                
+                async with client.messages.stream(
+                    model=model_config.model or "claude-3-haiku-20240307",
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    messages=[{"role": "user", "content": prompt}]
+                ) as stream:
+                    async for text in stream.text_stream:
+                        yield text
+            else:
+                yield await self._handle_api_error(Exception("No API key provided"), prompt, model_config)
+                
+        except Exception as e:
+            logging.error(f"Anthropic Streaming API error: {str(e)}")
+            yield await self._handle_api_error(e, prompt, model_config)
+    
+    async def validate_model_config(self, model_config: ModelConfig) -> Dict[str, Any]:
+        """Validate Anthropic model configuration"""
+        try:
+            self._validate_model_parameters(model_config)
+            
+            if not model_config.api_key:
+                return {"valid": False, "error": "API key required"}
+            
+            client = anthropic.AsyncAnthropic(api_key=model_config.api_key)
+            
+            test_response = await client.messages.create(
+                model=model_config.model or "claude-3-haiku-20240307",
+                max_tokens=10,
+                messages=[{"role": "user", "content": "Test connection"}]
+            )
+            
+            return {
+                "valid": True,
+                "model_name": model_config.model or "claude-3-haiku-20240307",
+                "capabilities": ["text", "creative", "analysis", "emotional"],
+                "test_response_length": len(test_response.content[0].text)
+            }
+            
+        except Exception as e:
+            return {"valid": False, "error": str(e)}
     
     async def generate_image(self, prompt: str, model_config: ModelConfig, **kwargs) -> str:
         return await GoogleAIProvider().generate_image(prompt, model_config, **kwargs)
