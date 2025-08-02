@@ -154,7 +154,8 @@ export function ChatView({ models, userId }: ChatViewProps) {
           title: inputMessage.length > 30 ? inputMessage.substring(0, 30) + '...' : inputMessage,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          messages: updatedMessages
+          messages: updatedMessages,
+          userId: 'default_user'
         };
         
         try {
@@ -280,7 +281,8 @@ export function ChatView({ models, userId }: ChatViewProps) {
         title: `新對話 ${conversations.length + 1}`,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        messages: []
+        messages: [],
+        userId: 'default_user'
       };
       
       await createConversation(newConversation);

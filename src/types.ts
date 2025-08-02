@@ -122,6 +122,7 @@ export interface Conversation {
   createdAt: string;
   updatedAt: string;
   messages: ChatMessage[];
+  userId: string;
 }
 
 export interface ExternalServiceConnector {
