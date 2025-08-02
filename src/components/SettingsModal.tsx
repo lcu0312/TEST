@@ -229,13 +229,28 @@ function ModelConfigTab({
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-stone-800">已配置的模型</h3>
-          <button
-            onClick={() => {setEditingModel(null); setFormData({});}}
-            className="flex items-center gap-2 px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
-          >
-            <Plus size={16} />
-            新增
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                try {
+                  const result = await apiService.detectAvailableModels();
+                  alert(`檢測到 ${result.total_available} 個可用模型`);
+                } catch (error) {
+                  alert('模型檢測失敗');
+                }
+              }}
+              className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            >
+              檢測模型
+            </button>
+            <button
+              onClick={() => {setEditingModel(null); setFormData({});}}
+              className="flex items-center gap-2 px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
+            >
+              <Plus size={16} />
+              新增
+            </button>
+          </div>
         </div>
         
         <div className="space-y-3">

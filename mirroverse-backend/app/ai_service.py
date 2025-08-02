@@ -3,6 +3,7 @@ import random
 import os
 import time
 from typing import Dict, Any, List, Optional
+from datetime import datetime
 from app.models import GeneratorOutput, StoryGraph, StoryNode, Choice, ChatMessage, MCPConfig, ModelConfig
 from app.database import database as db
 from app.engine_modules import engine

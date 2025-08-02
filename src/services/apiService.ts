@@ -1,6 +1,6 @@
 import { ModelConfig, MCPConfig, SavedCreation, LorebookEntry, Conversation, ExternalServiceConnector } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://app-ltskwkxi.fly.dev';
 
 class ApiService {
   private sessionToken: string | null = null;
@@ -49,10 +49,10 @@ class ApiService {
   }
 
 
-  async login(username: string): Promise<{ session_token: string; user: any }> {
+  async login(username: string, password: string = 'demo'): Promise<{ session_token: string; user: any }> {
     const result = await this.request<{ session_token: string; user: any }>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ username }),
+      body: JSON.stringify({ username, password }),
     });
 
     this.sessionToken = result.session_token;
