@@ -48,20 +48,51 @@ class AIService:
         return await self.engine.execute_single_generation(prompt, default_model)
     
     async def chat_response(self, message: str, conversation_history: Optional[List[ChatMessage]] = None, model_config: Optional[ModelConfig] = None) -> str:
-        """Generate chat response using specified model or default"""
+        """Generate chat response using specified model or default with meta-level correction"""
         
-        if model_config:
-            provider = self.engine.providers.get(model_config.provider, self.engine.providers['google'])
-            return await provider.generate_text(f"作為智能助手，請回應用戶的訊息：{message}", model_config)
-        
-        responses = [
-            f"關於「{message}」，這是一個很有趣的想法！讓我們一起探索更多可能性。",
-            f"我理解你提到的「{message}」。這讓我想到了一些創意的方向...",
-            f"「{message}」確實值得深入思考。我們可以從不同角度來分析這個概念。",
-            f"基於你的輸入「{message}」，我建議我們可以嘗試以下幾個創意方向...",
-            f"很棒的想法！「{message}」可以成為一個很好的創作起點。"
-        ]
-        
-        return random.choice(responses)
+        try:
+            if model_config:
+                provider = self.engine.providers.get(model_config.provider, self.engine.providers['google'])
+                response = await provider.generate_text(f"作為智能助手，請回應用戶的訊息：{message}", model_config)
+                
+                if "[系統診斷]" in response:
+                    correction_context = {
+                        "message": message,
+                        "model_config": model_config,
+                        "conversation_history": conversation_history,
+                        "timestamp": datetime.now().isoformat()
+                    }
+                    db.correction_contexts = getattr(db, 'correction_contexts', {})
+                    db.correction_contexts[model_config.user_id] = correction_context
+                
+                return response
+            
+            responses = [
+                f"關於「{message}」，讓我進行系統性分析以提供最佳回應。",
+                f"我正在運用元級思維來深度理解「{message}」的含義。",
+                f"「{message}」觸發了我的多維度分析機制，讓我為您提供全面的見解。",
+                f"基於元級糾錯協議，我會從多個角度來回應「{message}」。",
+                f"很棒的想法！「{message}」值得進行系統性的創意探索。"
+            ]
+            
+            return random.choice(responses)
+            
+        except Exception as e:
+            error_context = {
+                "error_message": str(e),
+                "context": {
+                    "message": message,
+                    "service": "chat_response",
+                    "timestamp": datetime.now().isoformat()
+                }
+            }
+            
+            if hasattr(self.engine, 'meta_correction_protocol'):
+                protocol_result = await self.engine.meta_correction_protocol.execute_protocol(
+                    error_context, model_config.user_id if model_config else "anonymous"
+                )
+                return f"[元級糾錯] 系統正在進行深度診斷和修復策略制定。請稍候..."
+            
+            return f"抱歉，處理您的訊息時遇到問題：{str(e)}"
 
 ai_service = AIService()

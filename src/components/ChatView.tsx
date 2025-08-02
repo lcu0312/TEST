@@ -150,13 +150,31 @@ export function ChatView({ models, userId }: ChatViewProps) {
       }
     } catch (error) {
       console.error('Failed to send message:', error);
-      const errorMessage: ChatMessage = {
+      
+      const errorText = error instanceof Error ? error.message : String(error);
+      
+      let assistantContent = '抱歉，發送訊息時發生錯誤。請檢查網路連接和 AI 模型設定。';
+      
+      if (errorText.includes('Authentication') || errorText.includes('Configuration')) {
+        assistantContent = '檢測到系統配置問題，正在啟動元級糾錯協議進行診斷...';
+        
+        try {
+          const correctionStatus = await apiService.getMetaCorrectionStatus();
+          if (correctionStatus && correctionStatus.has_pending_correction) {
+            assistantContent += '\n\n系統已生成修復策略報告，請查看並批准執行。';
+          }
+        } catch (statusError) {
+          console.error('Failed to check correction status:', statusError);
+        }
+      }
+      
+      const assistantErrorMessage: ChatMessage = {
         id: generateId(),
         role: 'assistant',
-        content: '抱歉，發送訊息時發生錯誤。請檢查網路連接和 AI 模型設定。',
+        content: assistantContent,
         timestamp: new Date().toISOString()
       };
-      updateConversationMessages([...currentMessages, userMessage, errorMessage]);
+      updateConversationMessages([...currentMessages, userMessage, assistantErrorMessage]);
     } finally {
       setIsSending(false);
     }

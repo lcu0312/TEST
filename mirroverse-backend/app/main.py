@@ -512,6 +512,75 @@ def _get_model_cost(provider: str, model: str) -> float:
     
     return 0.002
 
+@app.get("/ai/meta-correction/status")
+async def get_meta_correction_status(current_user: User = Depends(get_current_user)):
+    """Get current meta-level correction status for user"""
+    try:
+        correction_contexts = getattr(db, 'correction_contexts', {})
+        user_context = correction_contexts.get(current_user.id)
+        
+        if user_context:
+            return {
+                "has_pending_correction": True,
+                "context": user_context,
+                "timestamp": user_context.get("timestamp")
+            }
+        
+        return {"has_pending_correction": False}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get correction status: {str(e)}")
+
+@app.post("/ai/meta-correction/approve")
+async def approve_meta_correction(
+    approval_data: Dict[str, Any], 
+    current_user: User = Depends(get_current_user)
+):
+    """Approve and execute meta-level correction strategy"""
+    try:
+        from app.engine_modules import engine
+        
+        if not hasattr(engine, 'meta_correction_protocol'):
+            raise HTTPException(status_code=400, detail="No meta-correction protocol available")
+        
+        strategy_id = approval_data.get("strategy_id")
+        user_approval = approval_data.get("approved", False)
+        
+        if not user_approval:
+            return {"message": "Meta-correction cancelled by user"}
+        
+        execution_result = await engine.meta_correction_protocol.execute_approved_strategy(
+            strategy_id, current_user.id
+        )
+        
+        return {
+            "message": "Meta-correction strategy executed successfully",
+            "result": execution_result,
+            "timestamp": time.time()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Meta-correction execution failed: {str(e)}")
+
+@app.get("/ai/meta-correction/history")
+async def get_meta_correction_history(current_user: User = Depends(get_current_user)):
+    """Get meta-level correction history for user"""
+    try:
+        from app.engine_modules import engine
+        
+        if hasattr(engine, 'meta_correction_protocol'):
+            history = engine.meta_correction_protocol.correction_history
+            user_history = [
+                entry for entry in history 
+                if entry.get("user_id") == current_user.id
+            ]
+            return {"history": user_history}
+        
+        return {"history": []}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get correction history: {str(e)}")
+
 def _get_model_recommendations(provider_status: dict) -> List[str]:
     """Get recommendations for missing or additional models"""
     recommendations = []

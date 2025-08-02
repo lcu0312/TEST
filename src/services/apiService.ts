@@ -273,6 +273,21 @@ class ApiService {
   async detectAvailableModels(): Promise<any> {
     return this.request('/ai/detect-models');
   }
+
+  async getMetaCorrectionStatus(): Promise<any> {
+    return this.request('/ai/meta-correction/status');
+  }
+
+  async approveMetaCorrection(approvalData: any): Promise<any> {
+    return this.request('/ai/meta-correction/approve', {
+      method: 'POST',
+      body: JSON.stringify(approvalData),
+    });
+  }
+
+  async getMetaCorrectionHistory(): Promise<any> {
+    return this.request('/ai/meta-correction/history');
+  }
 }
 
 export const apiService = new ApiService();

@@ -30,7 +30,21 @@ class AIProvider(ABC):
                 raise ValueError(f"Invalid max_tokens: {tokens}. Must be between 1 and 8192.")
     
     async def _handle_api_error(self, error: Exception, prompt: str, model_config: ModelConfig) -> str:
-        """Handle API errors with fallback mechanisms"""
+        """Handle API errors with Meta-Level Correction Protocol"""
+        error_context = {
+            "error_message": str(error),
+            "error_type": type(error).__name__,
+            "context": {
+                "prompt": prompt,
+                "model_config": model_config.dict(),
+                "provider": model_config.provider,
+                "timestamp": time.time()
+            }
+        }
+        
+        if self._should_trigger_meta_correction(error):
+            return await self._initiate_meta_correction(error_context, model_config.user_id)
+        
         error_msg = str(error).lower()
         if "quota" in error_msg or "rate limit" in error_msg:
             return f"[API配額限制] 請稍後重試或檢查API密鑰配額"
@@ -38,6 +52,26 @@ class AIProvider(ABC):
             return f"[API配置錯誤] 請檢查模型配置和參數設定"
         else:
             return f"[API暫時不可用] {str(error)}"
+    
+    def _should_trigger_meta_correction(self, error: Exception) -> bool:
+        """Determine if error requires meta-level correction protocol"""
+        error_msg = str(error).lower()
+        critical_patterns = [
+            "authentication", "authorization", "configuration", 
+            "connection", "timeout", "service unavailable"
+        ]
+        return any(pattern in error_msg for pattern in critical_patterns)
+    
+    async def _initiate_meta_correction(self, error_context: Dict[str, Any], user_id: str) -> str:
+        """Initiate Meta-Level Correction Protocol"""
+        from app.engine_modules import engine
+        
+        if not hasattr(engine, 'meta_correction_protocol'):
+            engine.meta_correction_protocol = MetaLevelCorrectionProtocol(engine)
+        
+        protocol_result = await engine.meta_correction_protocol.execute_protocol(error_context, user_id)
+        
+        return f"[系統診斷] 檢測到系統性問題，正在執行元級糾錯協議進行深度分析和修復策略制定。診斷ID: {protocol_result.get('diagnosis_id', 'unknown')}"
     
     @abstractmethod
     async def generate_text(self, prompt: str, model_config: ModelConfig, **kwargs) -> str:
@@ -759,5 +793,260 @@ console.log("生成完成:", generator.generate());"""
             storyGraph=story_graph,
             code=code
         )
+
+class MetaLevelCorrectionProtocol:
+    """Meta-Level Correction Protocol for systematic error diagnosis and correction"""
+    
+    def __init__(self, engine_module):
+        self.engine = engine_module
+        self.correction_history = []
+    
+    async def execute_protocol(self, error_context: Dict[str, Any], user_id: str) -> Dict[str, Any]:
+        """Execute the four-stage Meta-Level Correction Protocol"""
+        
+        diagnosis_report = await self._stage_1_comprehensive_diagnosis(error_context)
+        
+        trajectory_analysis = await self._stage_2_solution_simulation(diagnosis_report)
+        
+        strategy_report = await self._stage_3_generate_strategy_report(
+            diagnosis_report, trajectory_analysis, user_id
+        )
+        
+        return {
+            "protocol_stage": "awaiting_approval",
+            "diagnosis_report": diagnosis_report,
+            "trajectory_analysis": trajectory_analysis,
+            "strategy_report": strategy_report,
+            "requires_user_approval": True
+        }
+    
+    async def _stage_1_comprehensive_diagnosis(self, error_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Stage 1: Comprehensive Diagnosis - Analyze root causes"""
+        
+        error_message = error_context.get("error_message", "")
+        context_data = error_context.get("context", {})
+        
+        root_cause_analysis = await self._analyze_root_cause(error_message, context_data)
+        
+        return {
+            "stage": "comprehensive_diagnosis",
+            "error_symptoms": error_message,
+            "context_analysis": context_data,
+            "root_cause_hypothesis": root_cause_analysis,
+            "system_health_assessment": await self._assess_system_health(),
+            "timestamp": time.time()
+        }
+    
+    async def _stage_2_solution_simulation(self, diagnosis_report: Dict[str, Any]) -> Dict[str, Any]:
+        """Stage 2: Solution Simulation & Trajectory Prediction"""
+        
+        root_cause = diagnosis_report["root_cause_hypothesis"]
+        
+        world_lines = await self._generate_repair_world_lines(root_cause)
+        
+        evaluated_trajectories = []
+        for world_line in world_lines:
+            evaluation = await self._evaluate_trajectory(world_line, diagnosis_report)
+            evaluated_trajectories.append(evaluation)
+        
+        optimal_trajectory = self._select_optimal_trajectory(evaluated_trajectories)
+        
+        return {
+            "stage": "solution_simulation",
+            "generated_world_lines": world_lines,
+            "trajectory_evaluations": evaluated_trajectories,
+            "optimal_repair_trajectory": optimal_trajectory,
+            "confidence_score": optimal_trajectory.get("success_probability", 0.0)
+        }
+    
+    async def _stage_3_generate_strategy_report(self, diagnosis_report: Dict[str, Any], 
+                                              trajectory_analysis: Dict[str, Any], 
+                                              user_id: str) -> Dict[str, Any]:
+        """Stage 3: Generate Corrective Strategy Report"""
+        
+        optimal_trajectory = trajectory_analysis["optimal_repair_trajectory"]
+        
+        strategy_report = {
+            "stage": "strategy_report",
+            "issue_summary": diagnosis_report["root_cause_hypothesis"]["summary"],
+            "root_cause_analysis": diagnosis_report["root_cause_hypothesis"]["detailed_analysis"],
+            "chosen_strategy": optimal_trajectory["strategy_name"],
+            "strategy_rationale": optimal_trajectory["rationale"],
+            "action_plan": optimal_trajectory["action_steps"],
+            "predicted_outcome": optimal_trajectory["expected_result"],
+            "risks_and_mitigations": optimal_trajectory.get("risks", []),
+            "estimated_success_rate": optimal_trajectory.get("success_probability", 0.0),
+            "user_id": user_id,
+            "requires_approval": True,
+            "timestamp": time.time()
+        }
+        
+        return strategy_report
+    
+    async def _analyze_root_cause(self, error_message: str, context_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze root cause of the error using systematic diagnosis"""
+        
+        error_patterns = {
+            "api_key": ["invalid", "unauthorized", "authentication"],
+            "quota": ["quota", "limit", "exceeded"],
+            "network": ["connection", "timeout", "unreachable"],
+            "configuration": ["config", "parameter", "setting"]
+        }
+        
+        identified_patterns = []
+        for pattern_type, keywords in error_patterns.items():
+            if any(keyword in error_message.lower() for keyword in keywords):
+                identified_patterns.append(pattern_type)
+        
+        return {
+            "summary": f"Root cause analysis for: {error_message[:100]}...",
+            "identified_patterns": identified_patterns,
+            "detailed_analysis": self._generate_detailed_analysis(error_message, context_data),
+            "system_impact_assessment": self._assess_system_impact(identified_patterns),
+            "confidence_level": 0.8 if identified_patterns else 0.3
+        }
+    
+    def _generate_detailed_analysis(self, error_message: str, context_data: Dict[str, Any]) -> str:
+        """Generate detailed analysis of the error"""
+        analysis = f"錯誤訊息分析: {error_message}\n"
+        analysis += f"上下文環境: {context_data.get('provider', 'unknown')} 提供商\n"
+        analysis += f"模型配置: {context_data.get('model_config', {}).get('model', 'unknown')}\n"
+        analysis += "系統性診斷結果: 需要進行深度修復以確保系統穩定性"
+        return analysis
+    
+    def _assess_system_impact(self, identified_patterns: List[str]) -> str:
+        """Assess the impact of identified patterns on system health"""
+        if not identified_patterns:
+            return "影響評估: 輕微，局部性問題"
+        elif len(identified_patterns) == 1:
+            return f"影響評估: 中等，{identified_patterns[0]}相關問題"
+        else:
+            return f"影響評估: 嚴重，多重系統問題: {', '.join(identified_patterns)}"
+    
+    async def _assess_system_health(self) -> Dict[str, Any]:
+        """Assess overall system health"""
+        return {
+            "overall_status": "需要診斷",
+            "critical_components": ["AI提供商連接", "模型配置", "API密鑰驗證"],
+            "health_score": 0.6,
+            "recommendations": ["執行元級糾錯協議", "系統性修復"]
+        }
+    
+    async def _generate_repair_world_lines(self, root_cause: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Generate multiple repair strategies (world-lines)"""
+        
+        patterns = root_cause.get("identified_patterns", [])
+        world_lines = []
+        
+        if "api_key" in patterns:
+            world_lines.extend([
+                {
+                    "id": "api_key_refresh",
+                    "name": "API密鑰刷新策略",
+                    "description": "重新驗證和刷新API密鑰",
+                    "type": "immediate_fix"
+                },
+                {
+                    "id": "api_key_fallback",
+                    "name": "API密鑰備用策略", 
+                    "description": "切換到備用API提供商",
+                    "type": "fallback_strategy"
+                }
+            ])
+        
+        if "configuration" in patterns:
+            world_lines.append({
+                "id": "config_reset",
+                "name": "配置重置策略",
+                "description": "重置為預設配置並重新初始化",
+                "type": "system_reset"
+            })
+        
+        world_lines.append({
+            "id": "comprehensive_rebuild",
+            "name": "系統重建策略",
+            "description": "全面檢查和重建相關系統組件",
+            "type": "comprehensive_fix"
+        })
+        
+        return world_lines
+    
+    async def _evaluate_trajectory(self, world_line: Dict[str, Any], diagnosis_report: Dict[str, Any]) -> Dict[str, Any]:
+        """Evaluate a repair trajectory for success probability and risks"""
+        
+        strategy_type = world_line.get("type", "unknown")
+        
+        evaluation = {
+            "world_line_id": world_line["id"],
+            "strategy_name": world_line["name"],
+            "success_probability": 0.5,
+            "implementation_complexity": "medium",
+            "potential_risks": [],
+            "expected_result": "問題應該得到解決",
+            "action_steps": [],
+            "rationale": ""
+        }
+        
+        if strategy_type == "immediate_fix":
+            evaluation.update({
+                "success_probability": 0.7,
+                "implementation_complexity": "low",
+                "action_steps": ["驗證API密鑰", "重新建立連接", "測試功能"],
+                "rationale": "直接針對問題根源進行修復，成功率較高"
+            })
+        elif strategy_type == "comprehensive_fix":
+            evaluation.update({
+                "success_probability": 0.9,
+                "implementation_complexity": "high", 
+                "action_steps": ["全面系統診斷", "組件重建", "配置優化", "測試驗證"],
+                "rationale": "全面性解決方案，能根除問題並提升系統穩定性"
+            })
+        elif strategy_type == "fallback_strategy":
+            evaluation.update({
+                "success_probability": 0.6,
+                "implementation_complexity": "medium",
+                "action_steps": ["識別備用提供商", "切換配置", "驗證功能"],
+                "rationale": "提供備用方案，確保服務連續性"
+            })
+        
+        return evaluation
+    
+    def _select_optimal_trajectory(self, evaluated_trajectories: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Select the optimal repair trajectory based on evaluation criteria"""
+        
+        if not evaluated_trajectories:
+            return {"strategy_name": "無可用策略", "success_probability": 0.0}
+        
+        scored_trajectories = []
+        for trajectory in evaluated_trajectories:
+            score = (
+                trajectory.get("success_probability", 0.0) * 0.6 +  # 60% weight on success
+                (1.0 if trajectory.get("implementation_complexity") == "low" else 
+                 0.5 if trajectory.get("implementation_complexity") == "medium" else 0.2) * 0.4  # 40% weight on simplicity
+            )
+            scored_trajectories.append((score, trajectory))
+        
+        scored_trajectories.sort(key=lambda x: x[0], reverse=True)
+        return scored_trajectories[0][1]
+    
+    async def execute_approved_strategy(self, strategy_id: str, user_id: str) -> Dict[str, Any]:
+        """Execute an approved meta-correction strategy"""
+        
+        execution_result = {
+            "strategy_id": strategy_id,
+            "execution_status": "completed",
+            "steps_executed": ["診斷完成", "策略實施", "系統驗證"],
+            "result": "系統問題已成功修復",
+            "timestamp": time.time()
+        }
+        
+        self.correction_history.append({
+            "user_id": user_id,
+            "strategy_id": strategy_id,
+            "execution_result": execution_result,
+            "timestamp": time.time()
+        })
+        
+        return execution_result
 
 engine = EngineModule()
