@@ -144,11 +144,18 @@ async def update_conversation(conversation_id: str, conversation: Conversation, 
 
 @app.delete("/conversations/{conversation_id}")
 async def delete_conversation(conversation_id: str, current_user: User = Depends(get_current_user)):
+    print(f"DEBUG: Attempting to delete conversation {conversation_id} for user {current_user.id}")
     existing = db.get_item(conversation_id, 'conversations')
-    if not existing or existing.user_id != current_user.id:
+    if not existing:
+        print(f"DEBUG: Conversation {conversation_id} not found")
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    if existing.user_id != current_user.id:
+        print(f"DEBUG: Conversation {conversation_id} belongs to user {existing.user_id}, not {current_user.id}")
         raise HTTPException(status_code=404, detail="Conversation not found")
     
     db.delete_item(conversation_id, 'conversations')
+    print(f"DEBUG: Successfully deleted conversation {conversation_id}")
     return {"message": "Conversation deleted"}
 
 @app.get("/external-connectors", response_model=List[ExternalServiceConnector])
@@ -157,9 +164,11 @@ async def get_external_connectors(current_user: User = Depends(get_current_user)
 
 @app.post("/external-connectors", response_model=ExternalServiceConnector)
 async def create_external_connector(connector: ExternalServiceConnector, current_user: User = Depends(get_current_user)):
+    print(f"DEBUG: Creating external connector for user {current_user.id}: {connector}")
     connector.id = str(uuid.uuid4())
     connector.user_id = current_user.id
     db.add_item(connector, 'external_connectors')
+    print(f"DEBUG: Successfully created external connector {connector.id}")
     return connector
 
 @app.put("/external-connectors/{connector_id}", response_model=ExternalServiceConnector)
@@ -175,11 +184,18 @@ async def update_external_connector(connector_id: str, connector: ExternalServic
 
 @app.delete("/external-connectors/{connector_id}")
 async def delete_external_connector(connector_id: str, current_user: User = Depends(get_current_user)):
+    print(f"DEBUG: Attempting to delete external connector {connector_id} for user {current_user.id}")
     existing = db.get_item(connector_id, 'external_connectors')
-    if not existing or existing.user_id != current_user.id:
+    if not existing:
+        print(f"DEBUG: External connector {connector_id} not found")
+        raise HTTPException(status_code=404, detail="External connector not found")
+    
+    if existing.user_id != current_user.id:
+        print(f"DEBUG: External connector {connector_id} belongs to user {existing.user_id}, not {current_user.id}")
         raise HTTPException(status_code=404, detail="External connector not found")
     
     db.delete_item(connector_id, 'external_connectors')
+    print(f"DEBUG: Successfully deleted external connector {connector_id}")
     return {"message": "External connector deleted"}
 
 @app.get("/saved-creations", response_model=List[SavedCreation])
