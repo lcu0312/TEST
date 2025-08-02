@@ -345,6 +345,8 @@ async def chat(request: ChatRequest, current_user: User = Depends(get_current_us
         
         return {
             "conversation_id": conversation_id,
+            "message_id": ai_message.id,
+            "response": ai_message.content,
             "message": ai_message,
             "conversation": conversation
         }
