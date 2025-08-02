@@ -77,11 +77,11 @@ function App() {
   }, []);
 
 
-  const handleLogin = async (username: string) => {
+  const handleLogin = async (username: string, password: string = 'demo') => {
     console.log('App: handleLogin called with username:', username);
     try {
       console.log('App: Calling apiService.login...');
-      const result = await apiService.login(username);
+      const result = await apiService.login(username, password);
       console.log('App: Login successful, user:', result.user);
       setUser(result.user);
       

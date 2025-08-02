@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 interface LoginViewProps {
-  onLogin: (username: string) => void;
+  onLogin: (username: string, password: string) => void;
 }
 
 export function LoginView({ onLogin }: LoginViewProps) {
@@ -16,7 +16,7 @@ export function LoginView({ onLogin }: LoginViewProps) {
     if (username.trim() && password.trim()) {
       try {
         console.log('LoginView: Calling onLogin with username:', username);
-        await onLogin(username);
+        await onLogin(username, password);
         console.log('LoginView: onLogin completed successfully');
       } catch (error) {
         console.error('LoginView: Login error:', error);
