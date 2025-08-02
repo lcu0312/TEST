@@ -7,7 +7,7 @@ from datetime import datetime
 from app.models import *
 from app.database import database as db
 from app.auth import get_current_user, get_optional_user
-from app.ai_service import ai_service
+from app.ai_service import ai_service, AIService
 
 app = FastAPI(title="MirroVerse Engine API", version="1.0.0")
 
