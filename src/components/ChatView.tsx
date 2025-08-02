@@ -155,7 +155,7 @@ export function ChatView({ models, userId }: ChatViewProps) {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           messages: updatedMessages,
-          userId: 'default_user'
+          userId: userId || 'default_user'
         };
         
         try {
@@ -282,7 +282,7 @@ export function ChatView({ models, userId }: ChatViewProps) {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         messages: [],
-        userId: 'default_user'
+        userId: userId || 'default_user'
       };
       
       await createConversation(newConversation);
