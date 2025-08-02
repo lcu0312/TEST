@@ -1,6 +1,7 @@
 import uuid
 import random
 import os
+import time
 from typing import Dict, Any, List, Optional
 from app.models import GeneratorOutput, StoryGraph, StoryNode, Choice, ChatMessage, MCPConfig, ModelConfig
 from app.database import database as db
@@ -27,12 +28,12 @@ class AIService:
             user_models = db.get_user_data(user_id, 'model_configs')
             if user_models:
                 for model in user_models:
-                    if model.api_key and model.api_key.strip():
+                    if model.api_key and model.api_key.strip() and len(model.api_key.strip()) > 10:
                         return await self.engine.execute_single_generation(prompt, model)
         
         global_models = list(db.model_configs.values())
         for model in global_models:
-            if model.api_key and model.api_key.strip():
+            if model.api_key and model.api_key.strip() and len(model.api_key.strip()) > 10:
                 return await self.engine.execute_single_generation(prompt, model)
         
         default_model = ModelConfig(

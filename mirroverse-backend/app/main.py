@@ -348,14 +348,19 @@ async def detect_available_models(current_user: User = Depends(get_current_user)
         
         for config in user_model_configs:
             provider = config.provider
+            has_api_key = bool(config.api_key and config.api_key.strip() and len(config.api_key.strip()) > 10)
+            
             if provider not in provider_status:
                 provider_status[provider] = {
-                    "available": bool(config.api_key and config.api_key.strip()),
+                    "available": has_api_key,
                     "models": [],
-                    "status": "configured" if config.api_key else "missing_api_key"
+                    "status": "configured" if has_api_key else "missing_api_key"
                 }
             
-            if provider_status[provider]["available"]:
+            if has_api_key:
+                provider_status[provider]["available"] = True
+                provider_status[provider]["status"] = "configured"
+                
                 model_capabilities = _get_model_capabilities(provider, config.model)
                 
                 provider_status[provider]["models"].append({
@@ -370,7 +375,7 @@ async def detect_available_models(current_user: User = Depends(get_current_user)
                         "supports_vision": "image" in model_capabilities,
                         "cost_per_1k_tokens": _get_model_cost(provider, config.model)
                     },
-                    "validation_status": "pending"
+                    "validation_status": "configured"
                 })
                 detected_models.append(config.id)
         
