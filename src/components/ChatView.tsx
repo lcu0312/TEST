@@ -143,10 +143,40 @@ export function ChatView({ models, userId }: ChatViewProps) {
         timestamp: new Date().toISOString()
       };
 
-      updateConversationMessages([...currentMessages, userMessage, assistantMessage]);
+      const updatedMessages = [...currentMessages, userMessage, assistantMessage];
+      updateConversationMessages(updatedMessages);
       
       if (result.conversation_id && !currentConversationId) {
         setCurrentConversationId(result.conversation_id);
+        
+        const newConversation: Conversation = {
+          id: result.conversation_id,
+          title: inputMessage.length > 30 ? inputMessage.substring(0, 30) + '...' : inputMessage,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          messages: updatedMessages
+        };
+        
+        try {
+          await createConversation(newConversation);
+        } catch (convError) {
+          console.error('Failed to create conversation record:', convError);
+        }
+      } else if (currentConversationId) {
+        const existingConversation = conversations.find(c => c.id === currentConversationId);
+        if (existingConversation) {
+          const updatedConversation: Conversation = {
+            ...existingConversation,
+            messages: updatedMessages,
+            updatedAt: new Date().toISOString()
+          };
+          
+          try {
+            await updateConversation(currentConversationId, updatedConversation);
+          } catch (updateError) {
+            console.error('Failed to update conversation:', updateError);
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to send message:', error);
