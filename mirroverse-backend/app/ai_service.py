@@ -6,7 +6,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 from app.models import GeneratorOutput, StoryGraph, StoryNode, Choice, ChatMessage, MCPConfig, ModelConfig
 from app.database import database as db
-from app.engine_modules import engine
+from app.engine_modules import engine, meta_correction_protocol
 
 class MetaLevelCorrectionProtocol:
     """
@@ -282,6 +282,93 @@ class AIService:
     def __init__(self):
         self.engine = engine
         self.meta_correction = meta_correction_protocol
+        self.engine.meta_correction_protocol = meta_correction_protocol
+        self._apply_meta_correction_to_construction()
+    
+    def _apply_meta_correction_to_construction(self):
+        """Apply meta-level correction protocol to all code construction and module development"""
+        self.construction_contexts = {}
+        self.module_development_history = []
+        
+        if hasattr(self.meta_correction, 'register_construction_handler'):
+            self.meta_correction.register_construction_handler(self._handle_construction_error)
+        if hasattr(self.meta_correction, 'register_module_development_handler'):
+            self.meta_correction.register_module_development_handler(self._handle_module_development)
+    
+    def _handle_construction_error(self, error_context):
+        """Handle construction errors using meta-level correction protocol"""
+        correction_id = str(uuid.uuid4())
+        self.construction_contexts[correction_id] = {
+            "stage": "construction_error",
+            "context": error_context,
+            "timestamp": datetime.now().isoformat(),
+            "correction_strategy": self._develop_construction_strategy(error_context)
+        }
+        return correction_id
+    
+    def _handle_module_development(self, module_context):
+        """Apply meta-correction to module development process"""
+        development_entry = {
+            "module": module_context.get("module_name"),
+            "stage": module_context.get("development_stage"),
+            "timestamp": datetime.now().isoformat(),
+            "correction_applied": True,
+            "strategy": self._develop_module_strategy(module_context)
+        }
+        self.module_development_history.append(development_entry)
+        return development_entry
+    
+    def _develop_construction_strategy(self, error_context):
+        """Develop systematic construction strategy using four-stage approach"""
+        return {
+            "stage_1_identification": f"Construction error in {error_context.get('component', 'unknown')}",
+            "stage_2_root_cause": self._analyze_construction_root_cause(error_context),
+            "stage_3_strategy": self._create_construction_solution_strategy(error_context),
+            "stage_4_execution": self._plan_construction_execution(error_context)
+        }
+    
+    def _develop_module_strategy(self, module_context):
+        """Develop systematic module development strategy"""
+        return {
+            "stage_1_identification": f"Module development for {module_context.get('module_name')}",
+            "stage_2_root_cause": "Systematic module architecture requirements",
+            "stage_3_strategy": "Apply meta-correction principles to module design",
+            "stage_4_execution": "Implement with integrated error handling and correction"
+        }
+    
+    def _analyze_construction_root_cause(self, error_context):
+        """Stage 2: Analyze root cause of construction issues"""
+        error_type = error_context.get("error_type", "unknown")
+        if error_type == "ai_model_mounting":
+            return "API key configuration or provider initialization failure"
+        elif error_type == "engine_coordination":
+            return "Inter-module communication or result coordination failure"
+        elif error_type == "pipeline_execution":
+            return "MCP step execution or parameter validation failure"
+        else:
+            return "Unidentified construction architecture issue"
+    
+    def _create_construction_solution_strategy(self, error_context):
+        """Stage 3: Create systematic solution strategy"""
+        root_cause = self._analyze_construction_root_cause(error_context)
+        if "API key" in root_cause:
+            return "Validate environment variables and provider configuration"
+        elif "coordination" in root_cause:
+            return "Implement robust inter-module communication protocols"
+        elif "pipeline" in root_cause:
+            return "Enhance MCP execution with comprehensive error handling"
+        else:
+            return "Apply comprehensive diagnostic and correction approach"
+    
+    def _plan_construction_execution(self, error_context):
+        """Stage 4: Plan precise execution steps"""
+        strategy = self._create_construction_solution_strategy(error_context)
+        return {
+            "immediate_actions": ["Validate configuration", "Test connectivity", "Verify integration"],
+            "validation_steps": ["Unit test", "Integration test", "End-to-end test"],
+            "rollback_plan": "Revert to last known working state if execution fails",
+            "success_criteria": "All construction components operational with error handling"
+        }
         
     async def generate_content(self, prompt: str, mcp_config_id: Optional[str] = None, files: Optional[List[Dict]] = None, user_id: str = None) -> GeneratorOutput:
         """Generate content using MCP pipeline or single model with Meta-Level Correction Protocol integration"""

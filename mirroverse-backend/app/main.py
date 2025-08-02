@@ -291,19 +291,40 @@ async def upload_file(file: UploadFile = File(...), current_user: User = Depends
 @app.post("/generate", response_model=GeneratorOutput)
 async def generate_content(request: GenerateRequest, current_user: User = Depends(get_current_user)):
     try:
+        ai_service = AIService()
+        
         result = await ai_service.generate_content(
             prompt=request.prompt,
             mcp_config_id=request.mcpConfigId,
             files=request.files,
             user_id=current_user.id
         )
+        
+        if hasattr(result, 'meta_correction'):
+            print(f"Meta-correction applied to generation: {result.meta_correction}")
+        
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+        ai_service = AIService()
+        error_context = {
+            "error_type": "content_generation",
+            "component": "generate_content_endpoint",
+            "user_id": current_user.id,
+            "mcp_config_id": request.mcpConfigId,
+            "error_message": str(e)
+        }
+        correction_id = ai_service._handle_construction_error(error_context)
+        
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Content generation failed with meta-correction ID: {correction_id}. Error: {str(e)}"
+        )
 
 @app.post("/chat")
 async def chat(request: ChatRequest, current_user: User = Depends(get_current_user)):
     try:
+        ai_service = AIService()
+        
         conversation_id = request.conversation_id
         if not conversation_id:
             conversation_id = str(uuid.uuid4())
@@ -336,7 +357,7 @@ async def chat(request: ChatRequest, current_user: User = Depends(get_current_us
             content=ai_response_text,
             role="assistant",
             timestamp=datetime.now().isoformat(),
-            attachments=[]
+            attachments=[],
         )
         
         conversation.messages.extend([user_message, ai_message])
@@ -348,11 +369,27 @@ async def chat(request: ChatRequest, current_user: User = Depends(get_current_us
             "message_id": ai_message.id,
             "response": ai_message.content,
             "message": ai_message,
-            "conversation": conversation
+            "conversation": conversation,
+            "meta_correction_status": "applied" if hasattr(ai_response_text, 'meta_correction') else "not_required"
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+        print(f"Chat error: {str(e)}")
+        
+        ai_service = AIService()
+        error_context = {
+            "error_type": "chat_response",
+            "component": "chat_endpoint",
+            "user_id": current_user.id,
+            "conversation_id": request.conversation_id,
+            "error_message": str(e)
+        }
+        correction_id = ai_service._handle_construction_error(error_context)
+        
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Chat failed with meta-correction ID: {correction_id}. Error: {str(e)}"
+        )
 
 @app.get("/ai/detect-models")
 async def detect_available_models(current_user: User = Depends(get_current_user)):

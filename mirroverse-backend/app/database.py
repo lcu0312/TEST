@@ -104,7 +104,7 @@ class InMemoryDatabase:
             name="Google Gemini 1.5 Flash",
             provider="google",
             model="gemini-1.5-flash",
-            api_key=os.getenv("GOOGLE_API_KEY", ""),
+            api_key=os.getenv("GOOGLE_API_KEY") or "",
             endpoint="https://generativelanguage.googleapis.com/v1beta",
             parameters={"temperature": 0.7, "max_tokens": 2000},
             user_id=default_user.id
@@ -116,7 +116,7 @@ class InMemoryDatabase:
             name="OpenAI GPT-4",
             provider="openai",
             model="gpt-4o",
-            api_key=os.getenv("OPENAI_API_KEY", ""),
+            api_key=os.getenv("OPENAI_API_KEY") or "",
             endpoint="https://api.openai.com/v1",
             parameters={"temperature": 0.7, "max_tokens": 2000},
             user_id=default_user.id
